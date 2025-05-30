@@ -29,7 +29,7 @@ When you push a tag like `v0.0.1`, GitHub Actions automatically:
 ### 3. Users Can Install
 
 ```bash
-npx hypermix       # One-time use
+npx hypermix             # One-time use
 npm install -g hypermix  # Global install
 ```
 

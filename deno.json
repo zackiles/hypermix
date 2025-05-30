@@ -17,7 +17,7 @@
     "build": "deno run -A scripts/build.ts",
     "build:docs": "deno doc --html --name=Hypermix --output=./docs/hypermix src/**/*.ts"
   },
-  "nodeModulesDir": false,
+  "nodeModulesDir": "none",
   "lock": true,
   "unstable": [
     "net",

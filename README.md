@@ -235,16 +235,3 @@ sources into a centralized location, tailored to your project's needs.
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Release Process
-
-Releasing a new version is fully automated:
-
-1. **Update version**: `npm version patch` (or minor/major)
-2. **Push with tags**: `git push origin main --tags`
-3. **GitHub Actions automatically**:
-   - Builds binaries for all platforms
-   - Creates a GitHub release with binaries
-   - Publishes to npm
-
-That's it! Users can then `npx hypermix` immediately.
