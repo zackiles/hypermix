@@ -1,0 +1,39 @@
+name: Test Installer
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  test-npm-installer:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [16, 18, 20]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test npm package locally
+        run: |
+          # Test the npm package can be installed
+          npm pack
+          npm install -g hypermix-*.tgz
+          
+          # Test that hypermix command is available
+          hypermix --version || hypermix --help
+          
+          # Test npx usage
+          npx hypermix --help
+
+      - name: Cleanup
+        run: |
+          npm uninstall -g hypermix
+          rm -f hypermix-*.tgz 

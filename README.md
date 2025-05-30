@@ -37,6 +37,47 @@ managing integration with various development environments. It supports:
 > [!TIP]
 > Check out some examples of [When To Use It](#when-to-use-it).
 
+## Getting Started
+
+The easiest way to use hypermix is with `npx` - no installation required:
+
+```bash
+# Run hypermix in your project directory
+npx hypermix
+
+# This single command will:
+# ✓ Build context files from your codebase
+# ✓ Add hypermix scripts to your package.json/deno.json
+# ✓ Configure .gitignore and .cursorignore files
+# ✓ Count tokens and provide usage analytics
+```
+
+### First Time Setup
+
+1. **Create a configuration file** (optional):
+   ```bash
+   # Create hypermix.config.js in your project root
+   touch hypermix.config.js
+   ```
+
+2. **Add your configuration** (see [Configuring Mixes](#configuring-mixes) for details):
+   ```javascript
+   module.exports = {
+     outputPath: '.hypermix',
+     mixes: [
+       // Your local project
+       { repomixConfig: './repomix.config.json' },
+       // Add external dependencies
+       { remote: 'vercel/ai', include: ['packages/ai/core/**/*.ts'] },
+     ],
+   }
+   ```
+
+3. **Run hypermix**:
+   ```bash
+   npx hypermix
+   ```
+
 ## Installation
 
 Run hypermix directly with Deno:
@@ -62,6 +103,26 @@ downloaded automatically during installation.
 
 ## Usage
 
+### Quick Start with NPM
+
+**Initialize hypermix in your project:**
+
+```bash
+# Run hypermix directly - it will automatically:
+# 1. Create context files from your codebase
+# 2. Set up project integrations (adds scripts to package.json)
+# 3. Configure ignore files (.gitignore, .cursorignore)
+npx hypermix
+
+# Run with a custom config file
+npx hypermix --config hypermix.config.ts
+
+# Run with custom output directory
+npx hypermix --output-path ./custom-context
+```
+
+### Using with Deno
+
 **Run hypermix with flags:**
 
 ```bash
@@ -74,8 +135,10 @@ intelligent token counting.
 **Available flags:**
 
 ```
+--config, -c       Path to hypermix config file (defaults to hypermix.config.{js,ts,json,jsonc})
+                   Example: npx hypermix --config ./custom-config.ts
 --output-path, -o  Override the default output directory for all context files
-                   Example: deno run -A mod.ts --output-path ./custom/path
+                   Example: npx hypermix --output-path ./custom/path
 --silent, -s       Suppress all output except errors
 ```
 
@@ -86,9 +149,21 @@ configured in the configs array within the script. These include:
 - Output paths for context files
 - Repomix configuration options
 
-**Use from your project task runner:**
+### Project Integration
 
-Once integrated into your project, you can simply run:
+When you run hypermix for the first time, it automatically:
+
+1. **Adds hypermix scripts to your project:**
+   - For npm/yarn projects: Updates `package.json` with a `hypermix` script
+   - For Deno projects: Updates `deno.json` with a `hypermix` task
+   - For Makefile projects: Adds a `hypermix` target
+
+2. **Configures ignore files:**
+   - Updates `.gitignore` to exclude generated context files
+   - Updates `.cursorignore` to allow AI tools to access context files
+   - Creates `.cursorignoreindex` to prevent automatic indexing
+
+**After initial setup, use from your project task runner:**
 
 ```bash
 # For npm/yarn projects
@@ -104,6 +179,46 @@ make hypermix
 > [!IMPORTANT]
 > Your .gitignore and .cursorignore files will be automatically updated to
 > handle the generated context files properly.
+
+### Common Use Cases
+
+**1. Process only your local codebase:**
+
+```bash
+# Uses your existing repomix.config.json
+npx hypermix
+```
+
+**2. Include specific dependencies:**
+
+```bash
+# Create a config that includes external repos
+echo 'module.exports = {
+  mixes: [
+    { repomixConfig: "./repomix.config.json" },
+    { remote: "facebook/react", include: ["packages/react/src/**/*.js"] }
+  ]
+}' > hypermix.config.js
+
+npx hypermix
+```
+
+**3. Use with different output paths:**
+
+```bash
+# Output to a custom directory
+npx hypermix --output-path ./ai-context
+
+# Silent mode (only show errors)
+npx hypermix --silent
+```
+
+**4. Quick one-time run without saving config:**
+
+```bash
+# Process current directory to default location
+npx hypermix --output-path .hypermix
+```
 
 ## Cursor Integration
 
@@ -124,10 +239,16 @@ Hypermix tracks token usage across all context files:
 
 ## Configuring Mixes
 
-Hypermix builds context by processing a `mixes` array, typically defined in a
-`hypermix.config.js/ts` (or `.json/c`) file. Each object in this array defines a
-single context-building task. There are two main ways to configure a mix item,
-which are mutually exclusive:
+Hypermix builds context by processing a `mixes` array, which can be defined in:
+
+- `hypermix.config.js` (CommonJS)
+- `hypermix.config.ts` (TypeScript - when using Deno)
+- `hypermix.config.json` (JSON)
+- `hypermix.config.jsonc` (JSON with comments)
+
+If no config file is found, hypermix will use default settings to process your current directory.
+
+Each object in the mixes array defines a single context-building task. There are two main ways to configure a mix item, which are mutually exclusive:
 
 ### 1. Remote Repository Mix
 

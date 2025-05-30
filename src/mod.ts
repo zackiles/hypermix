@@ -379,7 +379,10 @@ async function main() {
   logger.log(
     dedent(
       `${bold('🔥 Hypermixing the following repos:')}\n${
-        dim(configs.map((c) => c.remote).join(', '))
+        dim(
+          configs.map((c) => c.remote).slice(0, 4).join(', ') +
+            (configs.length > 4 ? ` and ${configs.length - 4} more...` : ''),
+        )
       }`,
     ),
   )
