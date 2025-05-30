@@ -23,13 +23,21 @@ tsconfig.json
 repomix.config.json
 repomix-output.xml
 
-# Scripts not needed for npm
-scripts/build.ts
-scripts/serve-docs.ts
-scripts/tag.ts
+# All TypeScript files in scripts (keep only the .js files)
+scripts/*.ts
+scripts/test-npm-package.js
 
 # Other files
 logo.png
 logo.ico
 *.test.ts
-*.test.js 
+*.test.js
+NPM_PUBLISHING.md
+
+# Git files
+.gitignore
+.gitattributes
+
+# Keep only the essential npm scripts
+!scripts/launcher.js
+!scripts/postinstall.js 

@@ -18,7 +18,7 @@
     "build:docs": "deno doc --html --name=Hypermix --output=./docs/hypermix src/**/*.ts"
   },
   "nodeModulesDir": false,
-  "lock": true,,
+  "lock": true,
   "unstable": [
     "net",
     "http",
@@ -71,7 +71,8 @@
     ],
     "exclude": [
       "scripts/postinstall.js",
-      "scripts/launcher.js"
+      "scripts/launcher.js",
+      "scripts/test-npm-package.js"
     ]
   },
   "fmt": {
@@ -87,6 +88,11 @@
       "src/**/*.ts",
       "scripts/**/*.ts",
       "*.md"
+    ],
+    "exclude": [
+      "scripts/postinstall.js",
+      "scripts/launcher.js",
+      "scripts/test-npm-package.js"
     ]
   },
   "exports": {

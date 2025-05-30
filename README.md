@@ -16,16 +16,23 @@
 
 ## Why
 
-`deno run -A mod.ts [flags]`... and everything is handled for you seamlessly. Build context files with intelligent token-awareness and code analytics. Auto-integrates with Cursor, Claude, and other tools for enhanced AI interactions.
+`deno run -A mod.ts [flags]`... and everything is handled for you seamlessly.
+Build context files with intelligent token-awareness and code analytics.
+Auto-integrates with Cursor, Claude, and other tools for enhanced AI
+interactions.
 
 ## How
 
-Hypermix uses repomix to build context files for AI tools, automatically managing integration with various development environments. It supports:
+Hypermix uses repomix to build context files for AI tools, automatically
+managing integration with various development environments. It supports:
 
-- **Token counting:** Tracks token usage across context files to optimize AI context windows
-- **Project integration:** Automatically adds tasks to package.json, deno.json, Makefiles, and more
+- **Token counting:** Tracks token usage across context files to optimize AI
+  context windows
+- **Project integration:** Automatically adds tasks to package.json, deno.json,
+  Makefiles, and more
 - **IDE configuration:** Sets up VS Code tasks and integrates with Cursor
-- **Intelligent ignores:** Automatically updates .gitignore, .cursorignore, and .cursorignoreindex
+- **Intelligent ignores:** Automatically updates .gitignore, .cursorignore, and
+  .cursorignoreindex
 
 > [!TIP]
 > Check out some examples of [When To Use It](#when-to-use-it).
@@ -38,6 +45,21 @@ Run hypermix directly with Deno:
 deno run -A mod.ts [flags]
 ```
 
+### NPM Installation
+
+You can also install hypermix globally via npm:
+
+```bash
+# Install globally
+npm install -g hypermix
+
+# Or use directly with npx (no installation required)
+npx hypermix
+```
+
+When installed via npm, the appropriate binary for your platform will be
+downloaded automatically during installation.
+
 ## Usage
 
 **Run hypermix with flags:**
@@ -46,7 +68,8 @@ deno run -A mod.ts [flags]
 deno run -A mod.ts
 ```
 
-Builds context files for your codebase and configured repositories, with intelligent token counting.
+Builds context files for your codebase and configured repositories, with
+intelligent token counting.
 
 **Available flags:**
 
@@ -56,7 +79,8 @@ Builds context files for your codebase and configured repositories, with intelli
 --silent, -s       Suppress all output except errors
 ```
 
-The script also passes through flags to the underlying repomix tool, which are configured in the configs array within the script. These include:
+The script also passes through flags to the underlying repomix tool, which are
+configured in the configs array within the script. These include:
 
 - Repository configurations (remote, include patterns, ignore patterns)
 - Output paths for context files
@@ -78,7 +102,8 @@ make hypermix
 ```
 
 > [!IMPORTANT]
-> Your .gitignore and .cursorignore files will be automatically updated to handle the generated context files properly.
+> Your .gitignore and .cursorignore files will be automatically updated to
+> handle the generated context files properly.
 
 ## Cursor Integration
 
@@ -99,7 +124,10 @@ Hypermix tracks token usage across all context files:
 
 ## Configuring Mixes
 
-Hypermix builds context by processing a `mixes` array, typically defined in a `hypermix.config.js/ts` (or `.json/c`) file. Each object in this array defines a single context-building task. There are two main ways to configure a mix item, which are mutually exclusive:
+Hypermix builds context by processing a `mixes` array, typically defined in a
+`hypermix.config.js/ts` (or `.json/c`) file. Each object in this array defines a
+single context-building task. There are two main ways to configure a mix item,
+which are mutually exclusive:
 
 ### 1. Remote Repository Mix
 
@@ -108,45 +136,57 @@ This type of mix fetches code from a specified remote GitHub repository.
 - **`remote`**:
   - **Type**: `string`
   - **Required**: Yes
-  - **Description**: The GitHub repository URL in `owner/repo` format (e.g., `denoland/std`).
+  - **Description**: The GitHub repository URL in `owner/repo` format (e.g.,
+    `denoland/std`).
 
 - **`include`**:
   - **Type**: `string[]`
   - **Required**: No
-  - **Description**: An array of glob patterns for files/directories to include (e.g., `['src/**/*.ts', 'README.md']`). Defaults to `**/*` (all files).
+  - **Description**: An array of glob patterns for files/directories to include
+    (e.g., `['src/**/*.ts', 'README.md']`). Defaults to `**/*` (all files).
 
 - **`ignore`**:
   - **Type**: `string[]`
   - **Required**: No
-  - **Description**: An array of glob patterns to exclude files/directories (e.g., `['**/test_data/**']`).
+  - **Description**: An array of glob patterns to exclude files/directories
+    (e.g., `['**/test_data/**']`).
 
 - **`output`**:
   - **Type**: `string`
   - **Required**: No
-  - **Description**: Custom output path for the generated XML file, relative to the global `outputPath`. If omitted, a path is derived from the remote URL (e.g., `owner/repo.xml`).
+  - **Description**: Custom output path for the generated XML file, relative to
+    the global `outputPath`. If omitted, a path is derived from the remote URL
+    (e.g., `owner/repo.xml`).
 
 - **`extraFlags`**:
   - **Type**: `string[]`
   - **Required**: No
-  - **Description**: An array of additional boolean command-line flags to pass to `repomix` (e.g., `['--compress']`).
+  - **Description**: An array of additional boolean command-line flags to pass
+    to `repomix` (e.g., `['--compress']`).
 
 ### 2. Local Repomix Configuration Mix
 
-This type of mix uses an existing `repomix.config.json` file to define the context building rules, typically for your local project codebase.
+This type of mix uses an existing `repomix.config.json` file to define the
+context building rules, typically for your local project codebase.
 
 - **`config`** or **`repomixConfig`**:
   - **Type**: `string`
   - **Required**: Yes
-  - **Description**: Path to your `repomix.config.json` file (e.g., `'./repomix.config.json'`).
+  - **Description**: Path to your `repomix.config.json` file (e.g.,
+    `'./repomix.config.json'`).
 
 - **`extraFlags`**:
   - **Type**: `string[]`
   - **Required**: No
-  - **Description**: An array of additional boolean command-line flags to pass to `repomix` (e.g., `['--quiet']`). Other options like `include`, `ignore`, and `output` are typically defined within the referenced `repomix.config.json` itself.
+  - **Description**: An array of additional boolean command-line flags to pass
+    to `repomix` (e.g., `['--quiet']`). Other options like `include`, `ignore`,
+    and `output` are typically defined within the referenced
+    `repomix.config.json` itself.
 
 ### Example `hypermix.config.ts`
 
-Here's how you might structure your `hypermix.config.ts` to include multiple mixes:
+Here's how you might structure your `hypermix.config.ts` to include multiple
+mixes:
 
 ```typescript
 // hypermix.config.ts
@@ -180,7 +220,8 @@ export default {
 }
 ```
 
-This structure allows for flexible and powerful context aggregation from various sources into a centralized location, tailored to your project's needs.
+This structure allows for flexible and powerful context aggregation from various
+sources into a centralized location, tailored to your project's needs.
 
 ## When To Use It
 
@@ -194,3 +235,16 @@ This structure allows for flexible and powerful context aggregation from various
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Release Process
+
+Releasing a new version is fully automated:
+
+1. **Update version**: `npm version patch` (or minor/major)
+2. **Push with tags**: `git push origin main --tags`
+3. **GitHub Actions automatically**:
+   - Builds binaries for all platforms
+   - Creates a GitHub release with binaries
+   - Publishes to npm
+
+That's it! Users can then `npx hypermix` immediately.

@@ -12,11 +12,13 @@
     "hypermix": "scripts/launcher.js"
   },
   "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "test": "node scripts/test-npm-package.js"
   },
   "files": [
-    "scripts/",
-    "bin/",
+    "scripts/launcher.js",
+    "scripts/postinstall.js",
+    "bin/.gitkeep",
     "README.md",
     "LICENSE"
   ],

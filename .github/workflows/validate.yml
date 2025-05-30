@@ -103,6 +103,11 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe.tar.gz" ]; then
+            echo "Missing tar.gz for x86_64-pc-windows-msvc.exe"
+            exit 1
+          fi
+
           # Check non-Windows targets
           for target in "${targets[@]}"; do
             if [ ! -f "./bin-test/hypermix-${target}" ]; then
@@ -112,6 +117,11 @@ jobs:
 
             if [ ! -f "./bin-test/hypermix-${target}.zip" ]; then
               echo "Missing zip for ${target}"
+              exit 1
+            fi
+
+            if [ ! -f "./bin-test/hypermix-${target}.tar.gz" ]; then
+              echo "Missing tar.gz for ${target}"
               exit 1
             fi
           done
@@ -135,6 +145,11 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f "./bin-test/hypermix-windows.exe.tar.gz" ]; then
+            echo "Missing platform tar.gz for windows.exe"
+            exit 1
+          fi
+
           # Check non-Windows platform aliases
           for platform in "${platforms[@]}"; do
             if [ ! -f "./bin-test/hypermix-${platform}" ]; then
@@ -146,10 +161,16 @@ jobs:
               echo "Missing platform zip for ${platform}"
               exit 1
             fi
+
+            if [ ! -f "./bin-test/hypermix-${platform}.tar.gz" ]; then
+              echo "Missing platform tar.gz for ${platform}"
+              exit 1
+            fi
           done
 
-          # Count the number of zip files
+          # Count the number of zip and tar.gz files
           zip_count=$(find ./bin-test -name "*.zip" | wc -l)
+          tar_count=$(find ./bin-test -name "*.tar.gz" | wc -l)
           expected_count=10  # 5 target platforms * 2 formats (specific name + platform name)
           if [ "$zip_count" -lt "$expected_count" ]; then
             echo "Expected at least ${expected_count} zip files, but found ${zip_count}"
@@ -158,6 +179,14 @@ jobs:
           else
             echo "Found $zip_count zip files in build output"
             find ./bin-test -name "*.zip" | sort
+          fi
+          if [ "$tar_count" -lt "$expected_count" ]; then
+            echo "Expected at least ${expected_count} tar.gz files, but found ${tar_count}"
+            find ./bin-test -name "*.tar.gz" | sort
+            exit 1
+          else
+            echo "Found $tar_count tar.gz files in build output"
+            find ./bin-test -name "*.tar.gz" | sort
           fi
 
       - name: Mock release creation (dry-run)
