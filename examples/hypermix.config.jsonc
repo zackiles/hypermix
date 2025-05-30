@@ -1,0 +1,36 @@
+{
+  "silent": false,
+  "outputPath": ".hypermix",
+  "mixes": [
+    { "remote": "vercel/ai", "include": ["packages/ai/core/**/*.ts"] },
+    { "remote": "YieldRay/json-rpc-ts", "include": ["src/**/*.ts"] },
+    {
+      "remote": "openai/openai-node",
+      "include": ["src/examples/**/*.ts"],
+      "output": "openai/sdk-examples.xml"
+    },
+    {
+      "remote": "openai/openai-node",
+      "include": ["src/**/*.ts", "api.md", "README.md"],
+      "output": "openai/sdk.xml"
+    },
+    {
+      "remote": "anthropics/anthropic-sdk-typescript",
+      "include": ["examples/**/**"],
+      "output": "anthropics/sdk-examples.xml"
+    },
+    {
+      "remote": "anthropics/anthropic-sdk-typescript",
+      "include": ["src/**/**", "api.md", "README.md"],
+      "output": "anthropics/sdk.xml"
+    },
+    {
+      "remote": "denoland/std",
+      "include": ["testing/**/*"],
+      "ignore": ["testing/tests/**", "testing/mocks/**"],
+      "output": "@std/testing.xml"
+    },
+    // Mix the current codebase / just an example if you also wanted to keep a repomix.config around. Path is relative to your root.
+    { "repomixConfig": "repomix.config.json", "output": "hypermix/context.xml", "extraFlags": ["--quiet"] }
+  ]
+} 

@@ -1,0 +1,345 @@
+---
+description:
+globs: *.md,*.ts
+alwaysApply: false
+---
+## How You Write Clean Code
+The following is a style guide of important styles and patterns you MUST enforce when writing code in `<project-root>new-codebase/`.
+
+## Code Style Guidelines
+
+- **Inline Comments**: Avoid inline comments unless they SIGNIFICANTLY improve the understanding of the code they're commenting on
+  - **IMPORTANT**: No comments for code that is easily understood!
+- **Formatting**: 2 spaces indentation, 120 char line width, single quotes, no semicolons
+- **Imports**: Use `jsr:` specifier for JSR packages, `import type` for types, and `@std/` for Deno standard libraries
+- **Exports**: Declared separately at the bottom of files to make it easy to quickly see what a module exports. Example:
+  ```ts
+  const someFunction = () => {}
+  const someOtherFunction = () => {}
+
+  // GOOD: Exports declared separately at the bottom
+  export { someFunction, someOtherFunction}
+  ```
+- **TypeScript**:
+  - Strict type checking
+  - Explicit return types
+  - Prefer utility types over interfaces
+  - Avoid unnecessary types
+  - Reuse and/or modify types that already exist from the project, native Deno types, or types from installed packages instead of creating new types
+- **Error Handling**: Use `try/catch` for async operations, avoid deeply nested error handling
+- **Dependencies**: Use `deno add` to manage dependencies, prefer `@std/` libraries for common tasks
+- **File Structure**: Keep files under 250 lines, organize by feature, use `src/` for source code and `test/` for tests
+- **Testing**: Use `@std/assert` and `@std/testing`
+  - Simple tests, low to medium test coverage unless explicitly asked to create comprehensive test coverage
+  - Descriptive test names
+  - Arrange/act/assert pattern
+  - Simple mocks whenever possible
+  - Share test utilities instead of repeating functionality in test files
+- **Expression-Oriented Imperative Style**: Favor concise, expression-based logic over step-by-step mutations, seeing transformations as value flows.
+- **Imperative Clarity with Functional Lean**: Handle edge cases early, perform I/O or logging before transformations, then chain pure operations.
+
+**IMPORTANT**: See `.cursor/rules/with-javascript.mdc` and `.cursor/rules/with-typescript.mdc` for full coding standards.
+
+## Naming Conventions
+
+- **kebab-case**: File and folder names
+- **PascalCase**: Classes, interfaces, types
+- **camelCase**: Variables, functions, methods
+- **UPPER_SNAKE_CASE**: Constants
+- **Test files**: `[filename].test.ts`
+
+
+### 🧭 **Expression-Oriented Imperative Style**
+
+#### ✅ Principle: Write logic as **expressions**, not **procedures**, when clarity permits
+
+Favor concise, expression-based logic over step-by-step mutations, seeing transformations as value flows.
+
+#### ✅ Guidelines
+
+* Collapse trivial branches into ternary or nullish coalescing expressions.
+* Prefer `const x = condition ? a : b` or `const y = value ?? default` over multiple statements.
+* Inline single-use variables if they clarify dataflow without obscuring context.
+
+#### ✅ Examples
+
+```ts
+const ext = filename.includes('.') ? filename.split('.').pop()! : 'txt'
+```
+
+```ts
+const timeoutMs = config.timeout ?? 5000
+```
+
+```ts
+const validEmails = users.filter(u => u.isActive).map(u => u.email)
+```
+
+```ts
+const outputFile = args.output ?? `${inputFile}.out`
+```
+
+---
+
+### 🧭 **Imperative Clarity with Functional Lean**
+
+#### ✅ Principle: Read top-to-bottom with guard clauses, minimal mutation, and isolated side effects
+
+Handle edge cases early, perform I/O or logging before transformations, then chain pure operations.
+
+#### ✅ Guidelines
+
+* Use guard clauses (`if (!cond) return`) instead of nested blocks.
+* Localize side effects at the top of functions.
+* Chain pure transformations once state is validated.
+
+#### ✅ Examples
+
+```ts
+function resolveBasePath(mod?: string): string {
+  if (!mod) {
+    console.warn('No module; falling back to cwd')
+    return Deno.cwd()
+  }
+  const path = mod.startsWith('file:') ? fromFileUrl(mod) : mod
+  return join(dirname(path), '..')
+}
+```
+
+```ts
+function toUpperName(name?: string): string {
+  if (!name) return ''
+  const trimmed = name.trim()
+  return trimmed.toUpperCase()
+}
+```
+
+---
+
+## 🦕 Deno 2 + TypeScript Syntax-Focused Clean Code Patterns
+
+### 🧭 **Explicit Imports with Named Specifiers**
+
+#### ✅ Principle: Use bare specifier imports for clarity and discoverability
+
+Leverage import maps and JSR to keep imports short, predictable, and syntax-consistent.
+
+#### ✅ Guidelines
+
+* Prefer `import { join } from '@std/path/join'` over deep relative paths.
+* Avoid `../`-heavy chains via import map aliases.
+* Group standard library, JSR, and local imports separately.
+
+#### ✅ Example
+
+```ts
+import { join } from '@std/path/join'
+import { parseArgs } from '@std/cli/parse-args'
+import { getConfig } from '@/config'
+```
+
+---
+
+### 🧭 **Top-Level `await` with Clear Entry Semantics**
+
+#### ✅ Principle: Use top-level `await` to start runtime logic without wrappers
+
+Deno supports top-level `await`; embrace it for clean initialization.
+
+#### ✅ Guidelines
+
+* Write startup scripts as top-level modules; no `main()` boilerplate.
+* Use `import.meta.main` with direct logic for clarity.
+
+#### ✅ Example
+
+```ts
+import { expandGlob } from '@std/fs'
+
+if (import.meta.main) {
+  for await (const file of expandGlob('src/**/*.ts')) {
+    console.log(file.path)
+  }
+}
+```
+
+---
+
+### 🧭 **Dynamic Module Resolution with `import.meta`**
+
+#### ✅ Principle: Use `import.meta.url` and `fromFileUrl` for module-aware paths
+
+Replace brittle `__dirname` patterns with built-in primitives.
+
+#### ✅ Guidelines
+
+* Use `import.meta.url` to discover file URLs.
+* Convert via `fromFileUrl()` when needing OS paths.
+
+#### ✅ Example
+
+```ts
+import { fromFileUrl, join } from '@std/path'
+
+const dir = join(fromFileUrl(import.meta.url), '..')
+```
+
+---
+
+### 🧭 **Cross-Platform Path Handling with `@std/path`**
+
+#### ✅ Principle: Normalize paths with utility functions
+
+Never assume POSIX-style slashes; use library functions for join/resolve.
+
+#### ✅ Guidelines
+
+* Use `join()`, `resolve()`, and `dirname()` from `@std/path`.
+* Avoid string concatenation for file paths.
+
+#### ✅ Example
+
+```ts
+import { join, dirname, fromFileUrl } from '@std/path'
+
+const configPath = join(dirname(fromFileUrl(import.meta.url)), 'config.json')
+```
+
+---
+
+### 🧭 **Idiomatic CLI Argument Handling with `@std/cli`**
+
+#### ✅ Principle: Parse flags declaratively with `parseArgs` from `@std/cli/parse-args` ([Deno][1])
+
+Define types, defaults, aliases, and collectable options in one call.
+
+#### ✅ Guidelines
+
+* Import `parseArgs` from `'@std/cli/parse-args'`.
+* Specify `boolean`, `string`, `negatable`, `collect`, `alias`, and `default` in options.
+* Destructure the returned object for clarity.
+
+#### ✅ Example
+
+```ts
+import { parseArgs } from '@std/cli/parse-args'
+
+const { verbose = false, port = 8080, _: files } = parseArgs(Deno.args, {
+  boolean: ['verbose'],
+  string: ['port'],
+  default: { port: 8080 },
+  alias: { v: 'verbose', p: 'port' },
+})
+
+if (verbose) console.log('Files to process:', files)
+```
+
+---
+
+### 🧭 **Use Native `Deno.` APIs Directly in Expressions**
+
+#### ✅ Principle: Lean on built-in globals for conciseness
+
+Avoid wrappers for one-off I/O or env access when inline calls suffice.
+
+#### ✅ Guidelines
+
+* Inline expressions using `await Deno.readTextFile()`, `Deno.env.get()`, etc.
+* Avoid over-abstracting trivial API usage.
+
+#### ✅ Example
+
+```ts
+const token = (await Deno.readTextFile('auth.txt')).trim()
+```
+
+[1]: https://docs.deno.com/examples/command_line_arguments/ "Command line arguments - Deno Docs"
+
+### 🧭 **Method Chaining for Fluent Transformations**
+
+#### ✅ Principle: Compose operations via **chained calls** for linear dataflow
+
+#### ✅ Guidelines
+
+* Link array transforms (`.filter`, `.map`, `.reduce`) into single expressions.
+* Chain promise handlers (`.then`, `.catch`, `.finally`) for sequential async logic.
+* Use chaining on APIs that expose fluent interfaces.
+
+#### ✅ Examples
+
+```ts
+const emails = users
+  .filter(u => u.isActive)
+  .map(u => u.email)
+  .join(";")
+```
+
+```ts
+fetch(url)
+  .then(res => res.json())
+  .then(data => process(data))
+  .catch(err => console.error(err))
+```
+
+```ts
+new TextDecoder()
+  .decode(await Deno.readFile(path))
+  .trim()
+  .split("\n")
+```
+
+### 🧭 **Hoist Repetitive Logic via Inline Arrow Helpers**
+
+#### ✅ Principle: Keep top-level functions lean by **hoisting repeated steps** as inner arrow functions
+
+#### ✅ Guidelines
+
+* Define inline arrow helpers at function start for repeated transformations.
+* Use hoisted helpers to eliminate duplicate code within orchestration.
+* Place main orchestration and error handling at bottom for clear flow.
+
+#### ✅ Examples
+
+```ts
+import { join } from "@std/path/join"
+
+export async function buildReports(paths: string[]) {
+  const read   = (p: string) => Deno.readTextFileSync(p)
+  const parse  = (s: string)   => JSON.parse(s) as Report
+  const format = (r: Report)   => `${r.id}: ${r.title}`
+
+  try {
+    const reports = paths
+      .map(read)
+      .map(parse)
+      .map(format)
+    console.log("Reports", reports)
+  } catch (error) {
+    console.error("Failed to build reports", error)
+  }
+}
+```
+
+```ts
+export async function deploy() {
+  const fetchConfig = () => Deno.readTextFile("config.json").then(JSON.parse)
+  const pack        = () => Deno.readFile("app.bundle")
+  const upload      = (data: Uint8Array) => Deno.writeFile("remote.pkg", data)
+
+  try {
+    const cfg    = await fetchConfig()
+    const bundle = await pack()
+    await upload(bundle)
+    console.log("Deployed", cfg.env)
+  } catch (err) {
+    console.error("Deploy error", err)
+  }
+}
+```
+
+## Summary
+This style guide promotes a clean, expression-oriented approach to Deno 2 + TypeScript that emphasizes clarity through compactness, reducing visual and cognitive noise. The goal is to write code that reads linearly, minimizes ceremony, and expresses logic as value transformations rather than imperative steps. By organizing setup and configuration at the top of functions and keeping orchestration flat and focused, it balances brevity with maintainability—favoring readable, minimal, and purposefully structured code over abstract or verbose patterns.
+
+## IMPORTANT
+- Avoid inline comments in code that is easily understood or refers to this style guide. Always cleanup dead code, bad comments, or code that doesn't adhere to this style guide
+- If you see code comments that don't adhere to these rules FIX or REMOVE them!

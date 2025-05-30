@@ -1,0 +1,35 @@
+# Source files (not needed for npm package)
+src/
+test/
+examples/
+docs/
+plugins/
+
+# Development files
+.github/
+.cursor/
+.vscode/
+.git/
+.hypermix/
+
+# Build artifacts that shouldn't be published
+bin/*
+!bin/.gitkeep
+
+# Config files
+deno.json
+deno.lock
+tsconfig.json
+repomix.config.json
+repomix-output.xml
+
+# Scripts not needed for npm
+scripts/build.ts
+scripts/serve-docs.ts
+scripts/tag.ts
+
+# Other files
+logo.png
+logo.ico
+*.test.ts
+*.test.js 

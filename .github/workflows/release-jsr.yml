@@ -1,0 +1,39 @@
+name: Publish to JSR
+
+on:
+  workflow_run:
+    workflows: ["Test Installer"]
+    types:
+      - completed
+
+jobs:
+  # This job relies on the test-installer job in the test-install.yml workflow
+  publish-jsr:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(github.event.workflow_run.head_commit.message, 'chore: tag version v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Create bin directory
+        run: mkdir -p bin
+
+      - name: Run Build Task
+        run: deno task build
+
+      - name: Publish to JSR
+        run: npx jsr publish --no-check

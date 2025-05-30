@@ -1,0 +1,179 @@
+name: Validate Pull Request
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      should-skip: ${{ steps.check-commit-msg.outputs.should-skip }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check commit message for skip keywords
+        id: check-commit-msg
+        run: |
+          # Get the commit message
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            COMMIT_MSG=$(git log -1 --pretty=%B ${{ github.event.pull_request.head.sha }})
+          else
+            COMMIT_MSG=$(git log -1 --pretty=%B ${{ github.sha }})
+          fi
+
+          # Check for skip keywords
+          echo "Commit message: $COMMIT_MSG"
+          if echo "$COMMIT_MSG" | grep -qE '(\[skip ci\]|\[skip workflow\]|chore\(release\):|release\(|version\()'; then
+            echo "Skip keywords found in commit message, skipping workflow"
+            echo "should-skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "No skip keywords found, proceeding with workflow"
+            echo "should-skip=false" >> $GITHUB_OUTPUT
+          fi
+
+  validate:
+    needs: check-skip
+    if: ${{ needs.check-skip.outputs.should-skip != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.x
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg zip unzip
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Lint and type check
+        run: deno task check
+
+      - name: Run tests
+        run: deno task test
+
+      - name: Build dry run
+        run: deno task build --bin-path=./bin-test
+
+      - name: Check build output
+        run: |
+          if [ ! -d "./bin-test" ]; then
+            echo "Build output directory not found"
+            exit 1
+          fi
+
+          # Check for all platform builds - target-specific builds
+          declare -a targets=(
+            "x86_64-unknown-linux-gnu"
+            "aarch64-unknown-linux-gnu"
+            "x86_64-apple-darwin"
+            "aarch64-apple-darwin"
+          )
+
+          # Check Windows separately because of .exe extension
+          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe" ]; then
+            echo "Missing binary for x86_64-pc-windows-msvc.exe"
+            exit 1
+          fi
+
+          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe.zip" ]; then
+            echo "Missing zip for x86_64-pc-windows-msvc.exe"
+            exit 1
+          fi
+
+          # Check non-Windows targets
+          for target in "${targets[@]}"; do
+            if [ ! -f "./bin-test/hypermix-${target}" ]; then
+              echo "Missing binary for ${target}"
+              exit 1
+            fi
+
+            if [ ! -f "./bin-test/hypermix-${target}.zip" ]; then
+              echo "Missing zip for ${target}"
+              exit 1
+            fi
+          done
+
+          # Check for platform aliases
+          declare -a platforms=(
+            "linux"
+            "linux-arm"
+            "macos"
+            "macos-arm"
+          )
+
+          # Check Windows platform alias separately
+          if [ ! -f "./bin-test/hypermix-windows.exe" ]; then
+            echo "Missing platform binary for windows.exe"
+            exit 1
+          fi
+
+          if [ ! -f "./bin-test/hypermix-windows.exe.zip" ]; then
+            echo "Missing platform zip for windows.exe"
+            exit 1
+          fi
+
+          # Check non-Windows platform aliases
+          for platform in "${platforms[@]}"; do
+            if [ ! -f "./bin-test/hypermix-${platform}" ]; then
+              echo "Missing platform binary for ${platform}"
+              exit 1
+            fi
+
+            if [ ! -f "./bin-test/hypermix-${platform}.zip" ]; then
+              echo "Missing platform zip for ${platform}"
+              exit 1
+            fi
+          done
+
+          # Count the number of zip files
+          zip_count=$(find ./bin-test -name "*.zip" | wc -l)
+          expected_count=10  # 5 target platforms * 2 formats (specific name + platform name)
+          if [ "$zip_count" -lt "$expected_count" ]; then
+            echo "Expected at least ${expected_count} zip files, but found ${zip_count}"
+            find ./bin-test -name "*.zip" | sort
+            exit 1
+          else
+            echo "Found $zip_count zip files in build output"
+            find ./bin-test -name "*.zip" | sort
+          fi
+
+      - name: Mock release creation (dry-run)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a temporary tag
+          MOCK_TAG="pr-dryrun-${GITHUB_SHA:0:7}"
+
+          # Create mock release notes
+          echo "This is a dry run test for PR #${{ github.event.pull_request.number || 'unknown' }}" > mock_release_notes.txt
+          echo "Branch: ${{ github.ref_name }}" >> mock_release_notes.txt
+          echo "Commit: ${{ github.sha }}" >> mock_release_notes.txt
+
+          echo "Would create release with tag: $MOCK_TAG"
+          echo "Would upload $(find ./bin-test -name "*.zip" | wc -l) zip files from ./bin-test directory"
+
+          # Don't actually create the release, just simulating the command that would run
+          echo "gh release create $MOCK_TAG bin-test/*.zip --draft --title \"Dry Run $MOCK_TAG\" --notes-file mock_release_notes.txt"

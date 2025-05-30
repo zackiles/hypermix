@@ -1,0 +1,35 @@
+{
+  "name": "hypermix",
+  "version": "0.0.1",
+  "description": "Real-time, token-aware, intelligent repomixing of all your codebase and dependencies",
+  "author": "Zachary Iles <zack.iles@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zackiles/hypermix"
+  },
+  "bin": {
+    "hypermix": "scripts/launcher.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "scripts/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "repomix",
+    "codebase",
+    "context",
+    "ai",
+    "cursor",
+    "claude",
+    "windsurf"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 

@@ -1,0 +1,132 @@
+name: Github Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.x
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg zip unzip
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Run tests
+        run: deno task test
+
+  build-and-release:
+    needs: test
+    runs-on: ubuntu-latest
+    # Add explicit permissions for releases
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.x
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip unzip tar
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Get commit message
+        id: get_commit_message
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:%B ${{ github.sha }})
+          # Properly handle multiline commit messages for GitHub Actions
+          echo "$COMMIT_MSG" > RELEASE_NOTES.txt
+          echo "NOTES_FILE=RELEASE_NOTES.txt" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: deno task build --bin-path=./bin
+
+      - name: Verify build artifacts
+        run: |
+          echo "Checking build output files..."
+          find bin -type f
+
+          # Ensure all expected platform-specific files and aliases are present
+          required_files=(
+            "hypermix-x86_64-unknown-linux-gnu"
+            "hypermix-aarch64-unknown-linux-gnu"
+            "hypermix-x86_64-pc-windows-msvc.exe"
+            "hypermix-x86_64-apple-darwin"
+            "hypermix-aarch64-apple-darwin"
+            "hypermix-linux"
+            "hypermix-linux-arm"
+            "hypermix-windows.exe"
+            "hypermix-macos"
+            "hypermix-macos-arm"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "bin/$file" ]; then
+              echo "ERROR: Missing binary file: bin/$file"
+              exit 1
+            fi
+            if [ ! -f "bin/$file.zip" ]; then
+              echo "ERROR: Missing zip file: bin/$file.zip"
+              exit 1
+            fi
+            if [ ! -f "bin/$file.tar.gz" ]; then
+              echo "ERROR: Missing tar.gz file: bin/$file.tar.gz"
+              exit 1
+            fi
+          done
+          echo "All required build artifacts have been verified."
+
+      - name: Delete existing release if it exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          gh release delete ${{ steps.get_tag.outputs.TAG }} --yes || true
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Upload both zip and tar.gz files
+          gh release create ${{ steps.get_tag.outputs.TAG }} \
+            bin/*.zip \
+            bin/*.tar.gz \
+            --title "Release ${{ steps.get_tag.outputs.TAG }}" \
+            --notes-file ${{ steps.get_commit_message.outputs.NOTES_FILE }}
