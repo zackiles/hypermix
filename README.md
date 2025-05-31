@@ -4,133 +4,75 @@
   <img src="logo.png" alt="Hypermix Logo" height="300">
 
 <div align="center">
-    <i>Repomix for agentic power-users</i></br></br>
-    <b>Real-time, token-aware, intelligent repomixing of your codebase and all dependencies. Auto-integrations for Cursor, Claude, and Windsurf that maintain the mixes configures rules and a tool for your agent to get the most out of your mixes.</b>
+    <b>Real-time, token-aware, auto-repomixing of your codebase and all of its dependencies. Manage multiple local and remote sources of context.  Native-integrations for Cursor, Claude, and Windsurf to provide optimized context for your agent. Built for Node, Bun, and Deno projects.</b>
   </div></br>
   <p>
-    <a href="https://github.com/zackiles/hypermix/actions/workflows/release-github.yml">
-      <img src="https://github.com/zackiles/hypermix/actions/workflows/release-github.yml/badge.svg" alt="Release">
+    <a href="https://github.com/zackiles/hypermix/actions/workflows/release.yml">
+      <img src="https://github.com/zackiles/hypermix/actions/workflows/release.yml/badge.svg" alt="Release">
     </a>
   </p>
 </div>
 
-## Why
+## Overview
 
-`deno run -A mod.ts [flags]`... and everything is handled for you seamlessly.
-Build context files with intelligent token-awareness and code analytics.
-Auto-integrates with Cursor, Claude, and other tools for enhanced AI
-interactions.
+Hypermix bridges the gap between repomix and agentic development environment. Once you add a mix, like a remote repo, it takes over and tracks token usage across your mixes, intelligently tuning your settings in real-time. Hypermix adds ergonomics to your workflows by:
 
-## How
+### How It Works
 
-Hypermix uses repomix to build context files for AI tools, automatically
-managing integration with various development environments. It supports:
+Once installed into a project, the Hypermix CLI is provided as a tool to your agent, prompting it to properly use and manage your mixes. It accomplishes this through it's own set of dynamic Cursor/Windsurf/Claude Code rules it injects, integrating seamlessly. Agents get access to what they need, when they need it.
 
-- **Token counting:** Tracks token usage across context files to optimize AI
-  context windows
-- **Project integration:** Automatically adds tasks to package.json, deno.json,
-  Makefiles, and more
-- **IDE configuration:** Sets up VS Code tasks and integrates with Cursor
-- **Intelligent ignores:** Automatically updates .gitignore, .cursorignore, and
-  .cursorignoreindex
+To manage its lifecycle, custom npm scripts, deno or vscode tasks, and git-hooks provide are added for Hypermix to automatically maintain the most optimal context to your agent without you lifting a finger.
 
 > [!TIP]
 > Check out some examples of [When To Use It](#when-to-use-it).
 
-## Getting Started
+## Quick Start
 
-The easiest way to use hypermix is with `npx` - no installation required:
+The easiest way to use Hypermix is with `npx` - no global installation required:
 
 ```bash
-# Run hypermix in your project directory
-npx hypermix
-
-# This single command will:
-# ✓ Build context files from your codebase
-# ✓ Add hypermix scripts to your package.json/deno.json
-# ✓ Configure .gitignore and .cursorignore files
-# ✓ Count tokens and provide usage analytics
+npx hypermix init
 ```
 
-### First Time Setup
+This single command will:
 
-1. **Create a configuration file** (optional):
-   ```bash
-   # Create hypermix.config.js in your project root
-   touch hypermix.config.js
-   ```
+- ✓ Initialize a hypermix config file
+- ✓ Add hypermix tasks in: package.json deno.json, tasks.json
+- ✓ Adds agent rules and settings
 
-2. **Add your configuration** (see [Configuring Mixes](#configuring-mixes) for details):
-   ```javascript
-   module.exports = {
-     outputPath: '.hypermix',
-     mixes: [
-       // Your local project
-       { repomixConfig: './repomix.config.json' },
-       // Add external dependencies
-       { remote: 'vercel/ai', include: ['packages/ai/core/**/*.ts'] },
-     ],
-   }
-   ```
+### Screenshot
 
-3. **Run hypermix**:
-   ```bash
-   npx hypermix
-   ```
+<img src="snip1.png" alt="Screenshot" height="350" >
 
-## Installation
+### Other Installation Methods
 
-Run hypermix directly with Deno:
+Hypermix can be used as a CLI or accessed programmatically by installing it from NPM (Node, Bun) or JSR (Deno).
+
+#### Deno
 
 ```bash
-deno run -A mod.ts [flags]
+deno add -g jsr:@zackiles/hypermix
 ```
 
-### NPM Installation
-
-You can also install hypermix globally via npm:
+#### Node / Bun
 
 ```bash
-# Install globally
 npm install -g hypermix
-
-# Or use directly with npx (no installation required)
-npx hypermix
 ```
-
-When installed via npm, the appropriate binary for your platform will be
-downloaded automatically during installation.
 
 ## Usage
 
-### Quick Start with NPM
+In general, a design goal of Hypermix is not having to access it at all once you've installed it. However, if you'd rather manage the lifecycle of your mixes yourself, or access Hypermix programmatically you can. All options and configuration have intelligent safe defaults.
 
-**Initialize hypermix in your project:**
+### Generating Mixes
 
 ```bash
-# Run hypermix directly - it will automatically:
-# 1. Create context files from your codebase
-# 2. Set up project integrations (adds scripts to package.json)
-# 3. Configure ignore files (.gitignore, .cursorignore)
-npx hypermix
-
 # Run with a custom config file
 npx hypermix --config hypermix.config.ts
 
 # Run with custom output directory
 npx hypermix --output-path ./custom-context
 ```
-
-### Using with Deno
-
-**Run hypermix with flags:**
-
-```bash
-deno run -A mod.ts
-```
-
-Builds context files for your codebase and configured repositories, with
-intelligent token counting.
 
 **Available flags:**
 
@@ -142,12 +84,7 @@ intelligent token counting.
 --silent, -s       Suppress all output except errors
 ```
 
-The script also passes through flags to the underlying repomix tool, which are
-configured in the configs array within the script. These include:
-
-- Repository configurations (remote, include patterns, ignore patterns)
-- Output paths for context files
-- Repomix configuration options
+The script also passes through flags to the underlying repomix tool, which all can be configured in the Hypermix config file.
 
 ### Project Integration
 
@@ -162,97 +99,45 @@ When you run hypermix for the first time, it automatically:
    - Updates `.gitignore` to exclude generated context files
    - Updates `.cursorignore` to allow AI tools to access context files
    - Creates `.cursorignoreindex` to prevent automatic indexing
+3. **Configures agent rules:**
+   - Detects Claude Code, Cursor, and Windsurf projects and configures rules and settings that allow agents to optimize the mixes they're provided
 
-**After initial setup, use from your project task runner:**
+**After initial setup, use from your project task runner as needed:**
 
 ```bash
-# For npm/yarn projects
 npm run hypermix
-
-# For deno projects
 deno task hypermix
-
-# For Makefile projects
-make hypermix
+bun run hypermix
 ```
 
 > [!IMPORTANT]
-> Your .gitignore and .cursorignore files will be automatically updated to
-> handle the generated context files properly.
+> Certain settings in files such as .gitignore, .cursorignore, .cursorignore files are added or modified to optimize how the mixes are used. None of them are required and can be removed at any time.
 
-### Common Use Cases
+### Token Awareness
 
-**1. Process only your local codebase:**
-
-```bash
-# Uses your existing repomix.config.json
-npx hypermix
-```
-
-**2. Include specific dependencies:**
-
-```bash
-# Create a config that includes external repos
-echo 'module.exports = {
-  mixes: [
-    { repomixConfig: "./repomix.config.json" },
-    { remote: "facebook/react", include: ["packages/react/src/**/*.js"] }
-  ]
-}' > hypermix.config.js
-
-npx hypermix
-```
-
-**3. Use with different output paths:**
-
-```bash
-# Output to a custom directory
-npx hypermix --output-path ./ai-context
-
-# Silent mode (only show errors)
-npx hypermix --silent
-```
-
-**4. Quick one-time run without saving config:**
-
-```bash
-# Process current directory to default location
-npx hypermix --output-path .hypermix
-```
-
-## Cursor Integration
-
-Hypermix works seamlessly with Cursor IDE:
-
-- Prevents context pollution by configuring .cursorignoreindex
-- Ensures context files are accessible when needed with .cursorignore
-- Sets up IDE tasks for quick access to hypermix commands
-
-## Token Awareness
-
-Hypermix tracks token usage across all context files:
+Hypermix tracks token usage across all context files. When you run the CLI it will output a handful of details:
 
 - Reports token counts per file and total usage
 - Warns when files exceed recommended token limits
 - Optimizes context files to stay within model token windows
 - Provides streaming token counting for large files
 
-## Configuring Mixes
+## Configuring Hypermix
 
 Hypermix builds context by processing a `mixes` array, which can be defined in:
 
-- `hypermix.config.js` (CommonJS)
-- `hypermix.config.ts` (TypeScript - when using Deno)
-- `hypermix.config.json` (JSON)
-- `hypermix.config.jsonc` (JSON with comments)
+- `hypermix.config.js`
+- `hypermix.config.ts`
+- `hypermix.config.json`
+- `hypermix.config.jsonc`
 
 If no config file is found, hypermix will use default settings to process your current directory.
 
 Each object in the mixes array defines a single context-building task. There are two main ways to configure a mix item, which are mutually exclusive:
 
-### 1. Remote Repository Mix
+### 1. Add Remote Repos
 
-This type of mix fetches code from a specified remote GitHub repository.
+This type of mix fetches code from a specified remote GitHub repository:
 
 - **`remote`**:
   - **Type**: `string`
@@ -285,10 +170,9 @@ This type of mix fetches code from a specified remote GitHub repository.
   - **Description**: An array of additional boolean command-line flags to pass
     to `repomix` (e.g., `['--compress']`).
 
-### 2. Local Repomix Configuration Mix
+### 2. Add Your Codebase
 
-This type of mix uses an existing `repomix.config.json` file to define the
-context building rules, typically for your local project codebase.
+This type of mix is for specifying your local codebase by pointing to its existing `repomix.config.json`:
 
 - **`config`** or **`repomixConfig`**:
   - **Type**: `string`

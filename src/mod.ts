@@ -361,7 +361,7 @@ const countTokensInFiles = async (
 async function main() {
   globalArgs = parseArgs(Deno.args, {
     string: ['output-path', 'config'],
-    boolean: ['silent'],
+    boolean: ['silent', 'init'],
     alias: {
       'output-path': ['outputPath', 'o'],
       'silent': ['s'],
@@ -369,6 +369,13 @@ async function main() {
     },
   })
   logger = createLogger(globalArgs.silent ?? false)
+
+  // Handle --init flag
+  if (globalArgs.init) {
+    const { init } = await import('./init.ts')
+    await init()
+    return
+  }
 
   const helpers = createFileHelpers()
   const hypermixConfig = await loadConfig(globalArgs.config)
@@ -494,3 +501,4 @@ if (import.meta.main) {
 }
 
 export { main }
+export { init } from './init.ts'

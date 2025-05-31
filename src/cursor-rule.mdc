@@ -3,7 +3,6 @@ description:
 globs: {repomix_files_list}
 alwaysApply: false
 ---
-
 # ATTENTION: Review These Files First
 You've been given access to the following Repomix files and one or more may help you answer the users current request:
 
