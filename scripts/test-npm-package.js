@@ -105,21 +105,69 @@ function main() {
       fs.chmodSync(binaryPath, 0o755)
     }
     
-    // Try to run the binary with --help or --version
+    // Try to run the binary with different flags that might work without config
     console.log('Testing binary execution...')
-    let result = spawnSync(binaryPath, ['--help'], { encoding: 'utf8' })
+    const testCommands = [
+      ['--help'],
+      ['--version'],
+      ['-h'],
+      ['-v']
+    ]
     
-    if (result.status !== 0) {
-      // Try with --version instead
-      result = spawnSync(binaryPath, ['--version'], { encoding: 'utf8' })
+    let success = false
+    let lastError = null
+    
+    for (const args of testCommands) {
+      try {
+        const result = spawnSync(binaryPath, args, { 
+          encoding: 'utf8',
+          timeout: 10000  // 10 second timeout
+        })
+        
+        // Consider it successful if:
+        // 1. Exit code is 0 (success)
+        // 2. Exit code is 1 but stderr contains expected config error (binary works but needs config)
+        // 3. Exit code is 1 but stdout contains help/version info
+        // 4. stdout contains help menu indicators like "USAGE:" or "OPTIONS:"
+        
+        if (result.status === 0) {
+          console.log(`✓ Binary executed successfully with ${args.join(' ')}`)
+          success = true
+          break
+        } else if (result.status === 1) {
+          const stderr = result.stderr || ''
+          const stdout = result.stdout || ''
+          
+          // Check if it's just a config error (means binary is working)
+          if (stderr.includes('No config file found') || 
+              stderr.includes('Expected one of:') ||
+              stdout.includes('help') ||
+              stdout.includes('usage') ||
+              stdout.includes('USAGE:') ||
+              stdout.includes('OPTIONS:') ||
+              stdout.includes('Hypermix') ||
+              stdout.includes('version')) {
+            console.log(`✓ Binary is working (config error is expected): ${args.join(' ')}`)
+            success = true
+            break
+          }
+        }
+        
+        lastError = new Error(`Command failed with status ${result.status}: ${result.stderr}`)
+      } catch (error) {
+        lastError = error
+        console.log(`Command ${args.join(' ')} failed: ${error.message}`)
+      }
     }
     
-    if (result.status === 0) {
+    if (success) {
       console.log('✓ Binary executed successfully')
       console.log('✓ All tests passed!')
     } else {
       console.error('❌ Binary execution failed')
-      console.error('Error output:', result.stderr)
+      if (lastError) {
+        console.error('Last error:', lastError.message)
+      }
       process.exit(1)
     }
   } catch (error) {

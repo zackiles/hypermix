@@ -20,37 +20,132 @@ const TARGET_MAP = {
 async function downloadFile(url, destPath) {
   return new Promise((resolve, reject) => {
     console.log(`Downloading from: ${url}`)
-    const file = fs.createWriteStream(destPath)
     
-    https.get(url, (response) => {
-      if (response.statusCode === 302 || response.statusCode === 301) {
-        // Follow redirect
-        const redirectUrl = response.headers.location
-        console.log(`Redirecting to: ${redirectUrl}`)
-        file.close()
-        fs.unlinkSync(destPath)
-        downloadFile(redirectUrl, destPath).then(resolve).catch(reject)
+    const makeRequest = (requestUrl, redirectCount = 0) => {
+      // Prevent infinite redirects
+      if (redirectCount > 10) {
+        reject(new Error('Too many redirects'))
         return
       }
       
-      if (response.statusCode !== 200) {
-        file.close()
-        fs.unlinkSync(destPath)
-        reject(new Error(`Failed to download: Status ${response.statusCode}, URL: ${url}`))
-        return
-      }
+      const file = fs.createWriteStream(destPath)
       
-      response.pipe(file)
-      
-      file.on('finish', () => {
+      const request = https.get(requestUrl, { timeout: 30000 }, (response) => {
+        // Handle redirects
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          const redirectUrl = response.headers.location
+          console.log(`Redirecting to: ${redirectUrl}`)
+          file.close()
+          
+          // Clean up the file before retrying
+          try {
+            fs.unlinkSync(destPath)
+          } catch (err) {
+            // File might not exist, ignore
+          }
+          
+          // Follow the redirect
+          makeRequest(redirectUrl, redirectCount + 1)
+          return
+        }
+        
+        if (response.statusCode !== 200) {
+          file.close()
+          try {
+            fs.unlinkSync(destPath)
+          } catch (err) {
+            // File might not exist, ignore
+          }
+          reject(new Error(`Failed to download: Status ${response.statusCode}, URL: ${requestUrl}`))
+          return
+        }
+        
+        response.pipe(file)
+        
+        file.on('finish', () => {
+          file.close()
+          resolve()
+        })
+        
+        file.on('error', (err) => {
+          file.close()
+          try {
+            fs.unlinkSync(destPath)
+          } catch (unlinkErr) {
+            // File might not exist, ignore
+          }
+          reject(err)
+        })
+        
+      }).on('error', (err) => {
         file.close()
-        resolve()
+        try {
+          fs.unlinkSync(destPath)
+        } catch (unlinkErr) {
+          // File might not exist, ignore
+        }
+        reject(err)
+      }).on('timeout', () => {
+        file.close()
+        try {
+          fs.unlinkSync(destPath)
+        } catch (unlinkErr) {
+          // File might not exist, ignore
+        }
+        reject(new Error(`Download timeout for URL: ${requestUrl}`))
       })
-    }).on('error', (err) => {
-      file.close()
-      fs.unlinkSync(destPath)
-      reject(err)
-    })
+      
+      request.setTimeout(30000)
+    }
+    
+    makeRequest(url)
+  })
+}
+
+async function downloadFileWithCurl(url, destPath) {
+  return new Promise((resolve, reject) => {
+    console.log(`Trying curl download from: ${url}`)
+    
+    // Try curl first, then wget as fallback
+    const commands = [
+      `curl -L -o "${destPath}" "${url}"`,
+      `wget -O "${destPath}" "${url}"`
+    ]
+    
+    let lastError = null
+    
+    const tryCommand = (index) => {
+      if (index >= commands.length) {
+        reject(lastError || new Error('All download methods failed'))
+        return
+      }
+      
+      const command = commands[index]
+      console.log(`Trying: ${command}`)
+      
+      try {
+        execSync(command, { stdio: 'pipe', timeout: 60000 })
+        
+        // Check if file was created and has content
+        if (fs.existsSync(destPath)) {
+          const stats = fs.statSync(destPath)
+          if (stats.size > 0) {
+            console.log(`Successfully downloaded with ${command.split(' ')[0]}`)
+            resolve()
+            return
+          }
+        }
+        
+        // File doesn't exist or is empty, try next method
+        tryCommand(index + 1)
+      } catch (error) {
+        console.log(`${command.split(' ')[0]} failed: ${error.message}`)
+        lastError = error
+        tryCommand(index + 1)
+      }
+    }
+    
+    tryCommand(0)
   })
 }
 
@@ -184,10 +279,40 @@ async function main() {
     
     console.log(`Attempting to download ${APP_NAME} archive from ${option.url}...`)
     
+    // Try https method first, then curl as fallback
+    const downloadMethods = [
+      () => downloadFile(option.url, archivePath),
+      () => downloadFileWithCurl(option.url, archivePath)
+    ]
+    
+    let downloaded = false
+    
+    for (const downloadMethod of downloadMethods) {
+      try {
+        await downloadMethod()
+        console.log(`Downloaded archive to ${archivePath}`)
+        downloaded = true
+        break
+      } catch (error) {
+        console.error(`Download method failed: ${error.message}`)
+        lastError = error
+        // Clean up any partial download
+        try {
+          if (fs.existsSync(archivePath)) {
+            fs.unlinkSync(archivePath)
+          }
+        } catch (cleanupErr) {
+          // Ignore cleanup errors
+        }
+      }
+    }
+    
+    if (!downloaded) {
+      console.error(`All download methods failed for ${option.url}`)
+      continue
+    }
+    
     try {
-      await downloadFile(option.url, archivePath)
-      console.log(`Downloaded archive to ${archivePath}`)
-      
       // Extract the archive
       console.log('Extracting binary...')
       const isZip = option.name.endsWith('.zip')
@@ -219,7 +344,7 @@ async function main() {
         }
       }
     } catch (error) {
-      console.error(`Failed to download or extract from ${option.url}:`, error.message)
+      console.error(`Failed to extract from ${option.url}:`, error.message)
       lastError = error
       // Continue to next option
     }

@@ -355,17 +355,76 @@ const countTokensInFiles = async (
   return { ...result, totalTokens }
 }
 
+const showHelp = () => {
+  const helpText = dedent`
+    ${bold('🔥 Hypermix')} - Real-time, token-aware, intelligent repomixing
+
+    ${bold('USAGE:')}
+      hypermix [OPTIONS]
+
+    ${bold('OPTIONS:')}
+      ${green('--help, -h')}              Show this help message
+      ${
+    green('--init')
+  }                  Initialize a new hypermix.config.ts file
+      ${green('--config, -c')} <path>     Specify config file path
+      ${
+    green('--output-path, -o')
+  } <path> Override output directory for context files
+      ${green('--silent, -s')}            Suppress all output except errors
+
+    ${bold('EXAMPLES:')}
+      ${dim('# Initialize a new config file')}
+      hypermix --init
+
+      ${dim('# Use default config (hypermix.config.ts)')}
+      hypermix
+
+      ${dim('# Use custom config file')}
+      hypermix --config ./custom.config.ts
+
+      ${dim('# Override output directory')}
+      hypermix --output-path ./custom-output
+
+      ${dim('# Run silently')}
+      hypermix --silent
+
+    ${bold('CONFIG FILES:')}
+      Hypermix looks for configuration files in this order:
+      • ${dim('hypermix.config.ts')}
+      • ${dim('hypermix.config.js')}
+      • ${dim('hypermix.config.json')}
+      • ${dim('hypermix.config.jsonc')}
+
+    ${bold('GETTING STARTED:')}
+      1. Run ${green('hypermix --init')} to create a config file
+      2. Edit the config to specify repositories and settings
+      3. Run ${green('hypermix')} to generate AI context files
+
+    ${dim('For more information, visit: https://github.com/zackiles/hypermix')}
+  `
+
+  console.log(helpText)
+}
+
 async function main() {
   globalArgs = parseArgs(Deno.args, {
     string: ['output-path', 'config'],
-    boolean: ['silent', 'init'],
+    boolean: ['silent', 'init', 'help'],
     alias: {
       'output-path': ['outputPath', 'o'],
       'silent': ['s'],
       'config': ['c'],
+      'help': ['h'],
     },
   })
   logger = createLogger(globalArgs.silent ?? false)
+
+  // Handle --help flag
+  if (globalArgs.help) {
+    showHelp()
+    return
+  }
 
   // Handle --init flag
   if (globalArgs.init) {
@@ -375,7 +434,23 @@ async function main() {
   }
 
   const helpers = createFileHelpers()
-  const hypermixConfig = await loadConfig(globalArgs.config)
+
+  // Try to load config and show help if not found
+  let hypermixConfig: Awaited<ReturnType<typeof loadConfig>>
+  try {
+    hypermixConfig = await loadConfig(globalArgs.config)
+  } catch (error) {
+    if (
+      error instanceof Error && error.message.includes('No config file found')
+    ) {
+      console.error(red('❌ No configuration file found'))
+      console.error('')
+      showHelp()
+      Deno.exit(1)
+    }
+    throw error
+  }
+
   const configs = hypermixConfig.mixes
   const outputPath = globalArgs['output-path'] ?? hypermixConfig.outputPath ??
     DEFAULT_PATH
