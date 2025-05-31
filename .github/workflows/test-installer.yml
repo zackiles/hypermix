@@ -43,9 +43,22 @@ jobs:
           PACKAGE_FILE=$(ls hypermix-*.tgz)
           echo "✓ Created package: $PACKAGE_FILE"
           
+          # Debug package contents
+          echo "Package contents:"
+          if ("${{ runner.os }}" -eq "Windows") {
+            tar -xf "$PACKAGE_FILE" -O package/package.json
+            tar -tvf "$PACKAGE_FILE" | Select-String -NotMatch "node_modules"
+          } else {
+            tar -tvf "$PACKAGE_FILE" | grep -v "node_modules"
+          }
+          
           echo "Installing package globally..."
           npm install -g "$PACKAGE_FILE"
           echo "✓ Package installed globally"
+          
+          # Run our test script first for better diagnostics
+          echo "Running npm package test script..."
+          node scripts/test-npm-package.js
           
           # Test that hypermix command is available
           echo "Testing hypermix command availability..."
@@ -78,9 +91,9 @@ jobs:
           npm uninstall -g hypermix || true
           
           # Use OS-specific command for file removal
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            del /q hypermix-*.tgz 2>nul || echo "No files to delete"
-          else
+          if ("${{ runner.os }}" -eq "Windows") {
+            Remove-Item -Path hypermix-*.tgz -Force -ErrorAction SilentlyContinue
+          } else {
             rm -f hypermix-*.tgz || true
-          fi
+          }
           echo "✓ Cleanup completed" 

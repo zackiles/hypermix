@@ -34,13 +34,42 @@ function main() {
   // Check if binary exists
   if (!fs.existsSync(binaryPath)) {
     console.error(`Binary not found at ${binaryPath}`)
+    
+    // Debug information
+    console.error('Debug info:')
+    console.error('- __dirname:', __dirname)
+    console.error('- Looking for binary:', binaryName)
+    
+    try {
+      const binDir = path.join(__dirname, '..', 'bin')
+      if (fs.existsSync(binDir)) {
+        const files = fs.readdirSync(binDir)
+        console.error('- Files in bin directory:', files.join(', ') || 'No files found')
+      } else {
+        console.error('- bin directory does not exist')
+      }
+    } catch (err) {
+      console.error('- Error listing bin directory:', err.message)
+    }
+    
+    // Try alternative binary names
+    const platformBinary = `${APP_NAME}-${platform}${isWindows ? '.exe' : ''}`
+    const platformBinaryPath = path.join(__dirname, '..', 'bin', platformBinary)
+    
+    if (fs.existsSync(platformBinaryPath)) {
+      console.error(`Using alternative binary: ${platformBinary}`)
+      runBinary(platformBinaryPath, process.argv.slice(2))
+      return
+    }
+    
     console.error('Please run: npm install')
     process.exit(1)
   }
   
-  // Get command line arguments (skip node and script path)
-  const args = process.argv.slice(2)
-  
+  runBinary(binaryPath, process.argv.slice(2))
+}
+
+function runBinary(binaryPath, args) {
   // Spawn the binary with inherited stdio
   const child = spawn(binaryPath, args, {
     stdio: 'inherit',
@@ -60,6 +89,18 @@ function main() {
     } else if (err.code === 'EACCES') {
       console.error(`Binary is not executable: ${binaryPath}`)
       console.error('Please check file permissions')
+      
+      if (process.platform !== 'win32') {
+        console.error('Attempting to fix permissions...')
+        try {
+          fs.chmodSync(binaryPath, 0o755)
+          console.error('Permissions fixed, retrying...')
+          runBinary(binaryPath, args)
+          return
+        } catch (chmodErr) {
+          console.error('Failed to fix permissions:', chmodErr.message)
+        }
+      }
     } else {
       console.error('Failed to start binary:', err.message)
     }

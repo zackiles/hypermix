@@ -19,21 +19,24 @@ const TARGET_MAP = {
 
 async function downloadFile(url, destPath) {
   return new Promise((resolve, reject) => {
+    console.log(`Downloading from: ${url}`)
     const file = fs.createWriteStream(destPath)
     
     https.get(url, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         // Follow redirect
+        const redirectUrl = response.headers.location
+        console.log(`Redirecting to: ${redirectUrl}`)
         file.close()
         fs.unlinkSync(destPath)
-        downloadFile(response.headers.location, destPath).then(resolve).catch(reject)
+        downloadFile(redirectUrl, destPath).then(resolve).catch(reject)
         return
       }
       
       if (response.statusCode !== 200) {
         file.close()
         fs.unlinkSync(destPath)
-        reject(new Error(`Failed to download: ${response.statusCode}`))
+        reject(new Error(`Failed to download: Status ${response.statusCode}, URL: ${url}`))
         return
       }
       
@@ -143,32 +146,92 @@ async function main() {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
   const version = packageJson.version
   
-  // Determine which archive format to use
-  const useZip = isWindows
-  const archiveExt = useZip ? '.zip' : '.tar.gz'
-  const archiveName = `${binaryName}${archiveExt}`
-  const archivePath = path.join(os.tmpdir(), archiveName)
+  // Array of potential URLs to try
+  const downloadOptions = []
   
-  // Download archive from GitHub releases
-  const downloadUrl = `https://github.com/zackiles/hypermix/releases/download/v${version}/${archiveName}`
-  console.log(`Downloading ${APP_NAME} archive for ${platformKey}...`)
-  console.log(`URL: ${downloadUrl}`)
+  // 1. Try the target-specific binary
+  const targetArchiveExt = isWindows ? '.zip' : '.tar.gz'
+  const targetArchiveName = `${binaryName}${targetArchiveExt}`
   
-  try {
-    await downloadFile(downloadUrl, archivePath)
-    console.log(`Downloaded archive to ${archivePath}`)
+  // 2. Try platform-specific simplified name
+  const platformNameMap = {
+    'win32': 'windows',
+    'darwin': 'macos',
+    'linux': 'linux'
+  }
+  const simplePlatform = platformNameMap[platform] || platform
+  const simpleArch = arch === 'arm64' ? '-arm' : ''
+  const simpleBinaryName = `${APP_NAME}-${simplePlatform}${simpleArch}${isWindows ? '.exe' : ''}`
+  const simpleArchiveName = `${simpleBinaryName}${targetArchiveExt}`
+  
+  // Add URLs to try in order
+  downloadOptions.push({
+    url: `https://github.com/zackiles/hypermix/releases/download/v${version}/${targetArchiveName}`,
+    name: targetArchiveName
+  })
+  
+  downloadOptions.push({
+    url: `https://github.com/zackiles/hypermix/releases/download/v${version}/${simpleArchiveName}`,
+    name: simpleArchiveName
+  })
+  
+  // Try downloading from each URL
+  let success = false
+  let lastError = null
+  
+  for (const option of downloadOptions) {
+    const archivePath = path.join(os.tmpdir(), option.name)
     
-    // Extract the archive
-    console.log('Extracting binary...')
-    await extractArchive(archivePath, binDir, useZip)
-    console.log(`Extracted binary to ${binaryPath}`)
+    console.log(`Attempting to download ${APP_NAME} archive from ${option.url}...`)
     
-    // Cleanup
-    fs.unlinkSync(archivePath)
-  } catch (error) {
-    console.error('Failed to download or extract binary:', error.message)
+    try {
+      await downloadFile(option.url, archivePath)
+      console.log(`Downloaded archive to ${archivePath}`)
+      
+      // Extract the archive
+      console.log('Extracting binary...')
+      const isZip = option.name.endsWith('.zip')
+      await extractArchive(archivePath, binDir, isZip)
+      
+      // Check if we got the expected binary
+      if (fs.existsSync(binaryPath)) {
+        console.log(`Successfully installed binary to ${binaryPath}`)
+        
+        // Cleanup
+        fs.unlinkSync(archivePath)
+        success = true
+        break
+      } else {
+        // Check if we got a platform-specific binary instead
+        const altBinaryPath = path.join(binDir, simpleBinaryName)
+        if (fs.existsSync(altBinaryPath)) {
+          console.log(`Found alternative binary at ${altBinaryPath}`)
+          // Copy it to the expected location
+          fs.copyFileSync(altBinaryPath, binaryPath)
+          console.log(`Copied to expected location: ${binaryPath}`)
+          success = true
+          break
+        } else {
+          console.log('Binary extraction failed. Files in bin directory:')
+          const files = fs.readdirSync(binDir)
+          console.log(files.join(', ') || 'No files found')
+          throw new Error('Binary not found after extraction')
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to download or extract from ${option.url}:`, error.message)
+      lastError = error
+      // Continue to next option
+    }
+  }
+  
+  if (!success) {
+    console.error('All download attempts failed.')
     console.error('\nYou can manually download the binary from:')
     console.error(`https://github.com/zackiles/hypermix/releases/tag/v${version}`)
+    if (lastError) {
+      console.error('\nLast error:', lastError.message)
+    }
     process.exit(1)
   }
 }

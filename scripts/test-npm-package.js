@@ -1,86 +1,134 @@
 #!/usr/bin/env node
 
 /**
- * Test script for npm package functionality
- * Run with: node scripts/test-npm-package.js
+ * Test script to verify that the npm package installation works correctly.
+ * This script is run during the GitHub Actions workflow to ensure the hypermix
+ * binary is properly installed and accessible.
  */
 
-const { execSync } = require("node:child_process");
-const path = require("node:path");
-const fs = require("node:fs");
+const fs = require('node:fs')
+const path = require('node:path')
+const { spawnSync } = require('node:child_process')
 
-console.log("Testing npm package locally...\n");
+const APP_NAME = 'hypermix'
 
-// Test 1: Check if package.json is valid
-console.log("1. Validating package.json...");
-try {
-  const packageJson = require("../package.json");
-  console.log(`   ✓ Package name: ${packageJson.name}`);
-  console.log(`   ✓ Version: ${packageJson.version}`);
-  console.log(`   ✓ Bin entry: ${Object.keys(packageJson.bin).join(", ")}`);
-} catch (error) {
-  console.error("   ✗ Failed to load package.json:", error.message);
-  process.exit(1);
+// Map Node.js platform/arch to binary targets
+const TARGET_MAP = {
+  'linux-x64': 'x86_64-unknown-linux-gnu',
+  'linux-arm64': 'aarch64-unknown-linux-gnu',
+  'darwin-x64': 'x86_64-apple-darwin',
+  'darwin-arm64': 'aarch64-apple-darwin',
+  'win32-x64': 'x86_64-pc-windows-msvc',
 }
 
-// Test 2: Check if launcher script exists
-console.log("\n2. Checking launcher script...");
-const launcherPath = path.join(__dirname, "launcher.js");
-if (fs.existsSync(launcherPath)) {
-  console.log(`   ✓ Launcher exists at: ${launcherPath}`);
-} else {
-  console.error("   ✗ Launcher script not found!");
-  process.exit(1);
+// Platform-specific simple names
+const PLATFORM_MAP = {
+  'win32': 'windows',
+  'darwin': 'macos',
+  'linux': 'linux',
 }
 
-// Test 3: Check if postinstall script exists
-console.log("\n3. Checking postinstall script...");
-const postinstallPath = path.join(__dirname, "postinstall.js");
-if (fs.existsSync(postinstallPath)) {
-  console.log(`   ✓ Postinstall exists at: ${postinstallPath}`);
-} else {
-  console.error("   ✗ Postinstall script not found!");
-  process.exit(1);
-}
-
-// Test 4: Test npm pack (dry run)
-console.log("\n4. Testing npm pack...");
-try {
-  const packOutput = execSync("npm pack --dry-run", { encoding: "utf8" });
-  const lines = packOutput.split("\n").filter((line) => line.trim());
-  console.log(`   ✓ Package would include ${lines.length} files`);
-  console.log("   Files preview:");
-  // biome-ignore lint/complexity/noForEach: <explanation>
-  lines.slice(0, 10).forEach((line) => console.log(`     - ${line}`));
-  if (lines.length > 10) {
-    console.log(`     ... and ${lines.length - 10} more files`);
+function main() {
+  console.log('Testing npm package installation...')
+  
+  // Check that bin directory exists
+  const binDir = path.join(__dirname, '..', 'bin')
+  if (!fs.existsSync(binDir)) {
+    console.error('❌ bin directory does not exist')
+    process.exit(1)
   }
-} catch (error) {
-  console.error("   ✗ Failed to run npm pack:", error.message);
-}
-
-// Test 5: Check if binaries exist (if already built)
-console.log("\n5. Checking for pre-built binaries...");
-const binDir = path.join(__dirname, "..", "bin");
-if (fs.existsSync(binDir)) {
-  const files = fs.readdirSync(binDir).filter((f) => f !== ".gitkeep");
-  if (files.length > 0) {
-    console.log(`   ✓ Found ${files.length} binaries in bin/`);
-    // biome-ignore lint/complexity/noForEach: <explanation>
-    files.slice(0, 5).forEach((file) => console.log(`     - ${file}`));
-    if (files.length > 5) {
-      console.log(`     ... and ${files.length - 5} more files`);
+  
+  // List all files in bin directory
+  console.log('Files in bin directory:')
+  const files = fs.readdirSync(binDir)
+  for (const file of files) {
+    console.log(`- ${file}`)
+  }
+  
+  if (files.length === 0) {
+    console.error('❌ No files found in bin directory')
+    process.exit(1)
+  }
+  
+  // Check for expected binary
+  const platform = process.platform
+  const arch = process.arch
+  const platformKey = `${platform}-${arch}`
+  const target = TARGET_MAP[platformKey]
+  
+  if (!target) {
+    console.error(`❌ Unsupported platform: ${platformKey}`)
+    process.exit(1)
+  }
+  
+  const isWindows = platform === 'win32'
+  const targetBinaryName = `${APP_NAME}-${target}${isWindows ? '.exe' : ''}`
+  const targetBinaryPath = path.join(binDir, targetBinaryName)
+  
+  // Also check for platform-specific binary
+  const simplePlatform = PLATFORM_MAP[platform] || platform
+  const simpleArch = arch === 'arm64' ? '-arm' : ''
+  const simpleBinaryName = `${APP_NAME}-${simplePlatform}${simpleArch}${isWindows ? '.exe' : ''}`
+  const simpleBinaryPath = path.join(binDir, simpleBinaryName)
+  
+  let binaryPath = null
+  
+  // Check for target-specific binary
+  if (fs.existsSync(targetBinaryPath)) {
+    console.log(`✓ Found target-specific binary: ${targetBinaryName}`)
+    binaryPath = targetBinaryPath
+  } 
+  // Check for platform-specific binary
+  else if (fs.existsSync(simpleBinaryPath)) {
+    console.log(`✓ Found platform-specific binary: ${simpleBinaryName}`)
+    binaryPath = simpleBinaryPath
+  } 
+  // Check for any executable binary
+  else {
+    // Look for any executable that starts with the app name
+    const binaryPattern = `${APP_NAME}-`
+    const possibleBinary = files.find(file => file.startsWith(binaryPattern))
+    
+    if (possibleBinary) {
+      binaryPath = path.join(binDir, possibleBinary)
+      console.log(`✓ Found alternative binary: ${possibleBinary}`)
+    } else {
+      console.error('❌ No suitable binary found in bin directory')
+      process.exit(1)
     }
-  } else {
-    console.log("   ℹ No binaries found (will be downloaded on install)");
   }
-} else {
-  console.log("   ℹ Bin directory not found (will be created on install)");
+  
+  // Check that the binary is executable
+  try {
+    // Make it executable on non-Windows platforms
+    if (!isWindows) {
+      fs.chmodSync(binaryPath, 0o755)
+    }
+    
+    // Try to run the binary with --help or --version
+    console.log('Testing binary execution...')
+    let result = spawnSync(binaryPath, ['--help'], { encoding: 'utf8' })
+    
+    if (result.status !== 0) {
+      // Try with --version instead
+      result = spawnSync(binaryPath, ['--version'], { encoding: 'utf8' })
+    }
+    
+    if (result.status === 0) {
+      console.log('✓ Binary executed successfully')
+      console.log('✓ All tests passed!')
+    } else {
+      console.error('❌ Binary execution failed')
+      console.error('Error output:', result.stderr)
+      process.exit(1)
+    }
+  } catch (error) {
+    console.error('❌ Error testing binary:', error.message)
+    process.exit(1)
+  }
 }
 
-console.log("\n✅ All checks passed! The npm package structure looks good.");
-console.log("\nTo test the full installation flow:");
-console.log("1. Build binaries: deno task build");
-console.log("2. Create a GitHub release with the binaries");
-console.log("3. Test local install: npm install -g .");
-console.log("4. Or test with npx: npx .");
+// Run the test
+if (require.main === module) {
+  main()
+}
