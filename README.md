@@ -43,6 +43,16 @@ This single command will:
 - ✓ Add hypermix tasks in: package.json deno.json, tasks.json
 - ✓ Adds agent rules and settings
 
+After initialization, you can quickly add repositories to your config:
+
+```bash
+# Add a repository using owner/repo format
+hypermix add openai/openai-node
+
+# Or using the full GitHub URL
+hypermix add https://github.com/openai/openai-node
+```
+
 ### Screenshot
 
 <img src="snip1.png" alt="Screenshot" height="350" >
@@ -230,6 +240,9 @@ export default {
 
 This structure allows for flexible and powerful context aggregation from various
 sources into a centralized location, tailored to your project's needs.
+
+> [!TIP]
+> You can quickly add a new repository to your config by running `hypermix add [owner/repo]`. This will automatically add a mix entry with safe defaults for the repository.
 
 ## When To Use It
 

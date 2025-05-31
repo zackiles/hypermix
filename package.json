@@ -19,6 +19,7 @@
     "scripts/launcher.js",
     "scripts/postinstall.js",
     "scripts/test-npm-package.js",
+    "bin/",
     "README.md",
     "LICENSE"
   ],

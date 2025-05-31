@@ -27,9 +27,42 @@ function main() {
     process.exit(1)
   }
   
+  // Determine the package root directory using the same logic as postinstall
+  let packageRoot
+  
+  // Try to find package.json to determine the real package root
+  const possibleRoots = [
+    path.join(__dirname, '..'), // Normal case: scripts is in package root
+    __dirname, // Scripts might be in root
+    process.cwd(), // Current working directory
+    // Try global npm directories as well
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'lib', 'node_modules', 'hypermix') : null,
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'node_modules', 'hypermix') : null,
+  ].filter(Boolean) // Remove null values
+  
+  for (const root of possibleRoots) {
+    const packageJsonPath = path.join(root, 'package.json')
+    if (fs.existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+        if (pkg.name === 'hypermix') {
+          packageRoot = root
+          break
+        }
+      } catch (err) {
+        // Continue looking
+      }
+    }
+  }
+  
+  if (!packageRoot) {
+    // Fallback to the original logic
+    packageRoot = path.join(__dirname, '..')
+  }
+  
   const isWindows = platform === 'win32'
   const binaryName = `${APP_NAME}-${target}${isWindows ? '.exe' : ''}`
-  const binaryPath = path.join(__dirname, '..', 'bin', binaryName)
+  const binaryPath = path.join(packageRoot, 'bin', binaryName)
   
   // Check if binary exists
   if (!fs.existsSync(binaryPath)) {
@@ -38,10 +71,11 @@ function main() {
     // Debug information
     console.error('Debug info:')
     console.error('- __dirname:', __dirname)
+    console.error('- packageRoot:', packageRoot)
     console.error('- Looking for binary:', binaryName)
     
     try {
-      const binDir = path.join(__dirname, '..', 'bin')
+      const binDir = path.join(packageRoot, 'bin')
       if (fs.existsSync(binDir)) {
         const files = fs.readdirSync(binDir)
         console.error('- Files in bin directory:', files.join(', ') || 'No files found')
@@ -54,7 +88,7 @@ function main() {
     
     // Try alternative binary names
     const platformBinary = `${APP_NAME}-${platform}${isWindows ? '.exe' : ''}`
-    const platformBinaryPath = path.join(__dirname, '..', 'bin', platformBinary)
+    const platformBinaryPath = path.join(packageRoot, 'bin', platformBinary)
     
     if (fs.existsSync(platformBinaryPath)) {
       console.error(`Using alternative binary: ${platformBinary}`)

@@ -1,13 +1,13 @@
 import { extname } from '@std/path'
 import { parse } from '@std/jsonc'
 import type { HypermixConfig, RepomixConfig } from './types.ts'
-import { CONFIG_NAMES } from './constants.ts'
+import { HYPERMIX_CONFIG_NAMES } from './constants.ts'
 
 async function loadConfig(configPath?: string): Promise<HypermixConfig> {
   let resolvedConfigPath = configPath
 
   if (!resolvedConfigPath) {
-    for (const name of CONFIG_NAMES) {
+    for (const name of HYPERMIX_CONFIG_NAMES) {
       try {
         await Deno.stat(name)
         resolvedConfigPath = name
@@ -19,7 +19,9 @@ async function loadConfig(configPath?: string): Promise<HypermixConfig> {
 
     if (!resolvedConfigPath) {
       throw new Error(
-        `No config file found. Expected one of: ${CONFIG_NAMES.join(', ')}`,
+        `No config file found. Expected one of: ${
+          HYPERMIX_CONFIG_NAMES.join(', ')
+        }`,
       )
     }
   }

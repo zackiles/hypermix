@@ -10,7 +10,8 @@
     "url": "https://github.com/zackiles/hypermix"
   },
   "tasks": {
-    "dev": "deno run -A src/mod.ts --config examples/hypermix.config.ts",
+    "dev": "deno run -A src/mod.ts",
+    "dev:example": "deno run -A src/mod.ts --config examples/hypermix.config.ts",
     "check": "deno lint && deno check src/mod.ts",
     "test": "deno test -A test/",
     "tag": "deno run -A scripts/tag.ts",

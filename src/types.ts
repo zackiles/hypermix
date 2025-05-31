@@ -1,4 +1,4 @@
-import type { BOOLEAN_FLAGS } from './constants.ts'
+import type { REPOMIX_BOOLEAN_FLAGS } from './constants.ts'
 
 type RepomixConfig = {
   remote?: string
@@ -7,7 +7,7 @@ type RepomixConfig = {
   output?: string
   config?: string
   repomixConfig?: string
-  extraFlags?: typeof BOOLEAN_FLAGS[number][]
+  extraFlags?: typeof REPOMIX_BOOLEAN_FLAGS[number][]
 }
 
 type HypermixConfig = {

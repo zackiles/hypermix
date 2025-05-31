@@ -32,8 +32,13 @@ import { countTokens } from 'gpt-tokenizer/model/gpt-4o'
 import { toTransformStream } from '@std/streams/to-transform-stream'
 import { parse as parseJsonc } from 'jsonc-parser'
 import { loadConfig } from './load-config.ts'
-import { BOOLEAN_FLAGS, DEFAULT_FLAGS, DEFAULT_PATH } from './constants.ts'
+import {
+  DEFAULT_PATH,
+  REPOMIX_BOOLEAN_FLAGS,
+  REPOMIX_DEFAULT_FLAGS,
+} from './constants.ts'
 import type { RepomixConfig } from './types.ts'
+import { handleAddCommand } from './add-mix.ts'
 
 let globalArgs: ReturnType<typeof parseArgs>
 let logger: ReturnType<typeof createLogger>
@@ -89,7 +94,7 @@ const buildRepomixArgs = async (
     args.push('--config', configPath)
   }
 
-  args.push(...DEFAULT_FLAGS)
+  args.push(...REPOMIX_DEFAULT_FLAGS)
 
   if (config.extraFlags?.length) {
     args.push(...config.extraFlags)
@@ -155,13 +160,13 @@ const runRepomix = async (
   // Validate extraFlags to ensure they exist in BOOLEAN_FLAGS
   if (config.extraFlags?.length) {
     const invalidFlags = config.extraFlags.filter((flag) =>
-      !(BOOLEAN_FLAGS as readonly string[]).includes(flag)
+      !(REPOMIX_BOOLEAN_FLAGS as readonly string[]).includes(flag)
     )
     if (invalidFlags.length > 0) {
       logger.error(
         `Invalid flags in extraFlags: ${
           invalidFlags.join(', ')
-        }. Valid flags are: ${BOOLEAN_FLAGS.join(', ')}`,
+        }. Valid flags are: ${REPOMIX_BOOLEAN_FLAGS.join(', ')}`,
       )
       return null
     }
@@ -357,23 +362,31 @@ const showHelp = () => {
   const helpText = dedent`
     ${bold('🔥 Hypermix')} - Real-time, token-aware, intelligent repomixing
 
+    
     ${bold('USAGE:')}
-      hypermix [OPTIONS]
+      hypermix [COMMAND] [OPTIONS]
 
+    
+    ${bold('COMMANDS:')}
+      init                       Initialize a new hypermix.config.ts file
+      add <repo>                 Add a GitHub repository to your config
+                                   ${
+    dim('# Format: owner/repo or full GitHub URL')
+  }      
+
+    
     ${bold('OPTIONS:')}
-      ${green('--help, -h')}              Show this help message
-      ${
-    green('--init')
-  }                  Initialize a new hypermix.config.ts file
-      ${green('--config, -c')} <path>     Specify config file path
+      ${green('--help, -h')}                 Show this help message
+      ${green('--config, -c')}       <path>  Specify config file path
       ${
     green('--output-path, -o')
-  } <path> Override output directory for context files
-      ${green('--silent, -s')}            Suppress all output except errors
+  }  <path>  Override output directory for context files
+      ${green('--silent, -s')}               Suppress all output except errors
 
+    
     ${bold('EXAMPLES:')}
-      ${dim('# Initialize a new config file')}
-      hypermix --init
+      ${dim(' # Initialize a new config file')}
+      hypermix init
 
       ${dim('# Use default config (hypermix.config.ts)')}
       hypermix
@@ -387,6 +400,10 @@ const showHelp = () => {
       ${dim('# Run silently')}
       hypermix --silent
 
+      ${dim('# Add a GitHub repository to your config')}
+      hypermix add openai/openai-node
+
+    
     ${bold('CONFIG FILES:')}
       Hypermix looks for configuration files in this order:
       • ${dim('hypermix.config.ts')}
@@ -394,11 +411,12 @@ const showHelp = () => {
       • ${dim('hypermix.config.json')}
       • ${dim('hypermix.config.jsonc')}
 
+    
     ${bold('GETTING STARTED:')}
-      1. Run ${green('hypermix --init')} to create a config file
+      1. Run ${green('hypermix init')} to create a config file
       2. Edit the config to specify repositories and settings
       3. Run ${green('hypermix')} to generate AI context files
-
+                                                              
     ${dim('For more information, visit: https://github.com/zackiles/hypermix')}
   `
 
@@ -406,9 +424,35 @@ const showHelp = () => {
 }
 
 async function main() {
+  const firstArg = Deno.args[0]
+  const secondArg = Deno.args[1]
+
+  if (firstArg === 'add') {
+    const isSilent = Deno.args.includes('--silent') || Deno.args.includes('-s')
+    logger = createLogger(isSilent)
+
+    if (!secondArg) {
+      logger.error(
+        red('Error: Missing repository identifier for "add" command.'),
+      )
+      logger.log('Usage: hypermix add <owner/repo | GitHub URL>')
+      Deno.exit(1)
+    }
+    await handleAddCommand(secondArg, logger)
+    return
+  }
+
+  if (firstArg === 'init') {
+    const isSilent = Deno.args.includes('--silent') || Deno.args.includes('-s')
+    logger = createLogger(isSilent)
+    const { init } = await import('./init.ts')
+    await init()
+    return
+  }
+
   globalArgs = parseArgs(Deno.args, {
     string: ['output-path', 'config'],
-    boolean: ['silent', 'init', 'help'],
+    boolean: ['silent', 'help'],
     alias: {
       'output-path': ['outputPath', 'o'],
       'silent': ['s'],
@@ -424,13 +468,6 @@ async function main() {
     return
   }
 
-  // Handle --init flag
-  if (globalArgs.init) {
-    const { init } = await import('./init.ts')
-    await init()
-    return
-  }
-
   const helpers = createFileHelpers()
 
   // Try to load config and show help if not found
@@ -441,7 +478,11 @@ async function main() {
     if (
       error instanceof Error && error.message.includes('No config file found')
     ) {
-      logger.error(red('❌ No configuration file found'))
+      logger.error(
+        red(
+          '❌ No configuration file found in the current directory or provided with --config',
+        ),
+      )
       logger.error('')
       showHelp()
       Deno.exit(1)

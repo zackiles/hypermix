@@ -47,6 +47,44 @@ jobs:
           npm install -g "$PACKAGE_FILE"
           echo "✓ Package installed globally"
           
+          # Debug npm installation
+          echo "Debugging npm installation..."
+          echo "Global npm modules directory:"
+          npm root -g
+          echo "Global npm bin directory:"
+          npm bin -g
+          echo "Checking if hypermix is in global modules:"
+          ls -la "$(npm root -g)" | grep hypermix || echo "hypermix not found in global modules"
+          
+          # Check if the scripts directory exists in the installed package
+          GLOBAL_HYPERMIX_DIR="$(npm root -g)/hypermix"
+          if [ -d "$GLOBAL_HYPERMIX_DIR" ]; then
+            echo "Contents of installed hypermix package:"
+            ls -la "$GLOBAL_HYPERMIX_DIR"
+            if [ -d "$GLOBAL_HYPERMIX_DIR/scripts" ]; then
+              echo "Scripts directory exists, listing contents:"
+              ls -la "$GLOBAL_HYPERMIX_DIR/scripts"
+            else
+              echo "Scripts directory not found in installed package"
+            fi
+            if [ -d "$GLOBAL_HYPERMIX_DIR/bin" ]; then
+              echo "Bin directory exists, listing contents:"
+              ls -la "$GLOBAL_HYPERMIX_DIR/bin"
+            else
+              echo "Bin directory not found in installed package"
+            fi
+          else
+            echo "Hypermix package directory not found at $GLOBAL_HYPERMIX_DIR"
+          fi
+          
+          # Check if postinstall ran successfully, if not run it manually
+          if [ -d "$GLOBAL_HYPERMIX_DIR" ] && [ ! -d "$GLOBAL_HYPERMIX_DIR/bin" ]; then
+            echo "Bin directory not found, running postinstall manually..."
+            cd "$GLOBAL_HYPERMIX_DIR"
+            node scripts/postinstall.js
+            echo "Manual postinstall completed"
+          fi
+          
           # Run our test script first for better diagnostics
           echo "Running npm package test script..."
           node scripts/test-npm-package.js

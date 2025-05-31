@@ -8,9 +8,9 @@ import {
   join,
   mockDenoCommand,
 } from './test-utils.ts'
-import { DEFAULT_FLAGS, DEFAULT_PATH } from '../src/constants.ts'
+import { DEFAULT_PATH, REPOMIX_DEFAULT_FLAGS } from '../src/constants.ts'
 import type { RepomixConfig } from '../src/types.ts'
-import { BOOLEAN_FLAGS } from '../src/constants.ts'
+import { REPOMIX_BOOLEAN_FLAGS } from '../src/constants.ts'
 
 // Since mod.ts doesn't export these functions, we'll need to mock them for testing
 // and directly test the core functionality using our own implementation
@@ -53,7 +53,7 @@ const buildRepomixArgs = (
     args.push('--config', configPath)
   }
 
-  args.push(...DEFAULT_FLAGS)
+  args.push(...REPOMIX_DEFAULT_FLAGS)
 
   if (config.extraFlags?.length) {
     args.push(...config.extraFlags)
@@ -90,13 +90,13 @@ const runRepomix = async (
   // Validate extraFlags to ensure they exist in BOOLEAN_FLAGS
   if (config.extraFlags?.length) {
     const invalidFlags = config.extraFlags.filter((flag) =>
-      !(BOOLEAN_FLAGS as readonly string[]).includes(flag)
+      !(REPOMIX_BOOLEAN_FLAGS as readonly string[]).includes(flag)
     )
     if (invalidFlags.length > 0) {
       console.error(
         `Invalid flags in extraFlags: ${
           invalidFlags.join(', ')
-        }. Valid flags are: ${BOOLEAN_FLAGS.join(', ')}`,
+        }. Valid flags are: ${REPOMIX_BOOLEAN_FLAGS.join(', ')}`,
       )
       return null
     }
@@ -142,7 +142,7 @@ Deno.test('buildRepomixArgs - handles remote GitHub repo', () => {
   assertEquals(fullUrl, 'https://github.com/owner/repo')
 
   // Verify all default flags are included
-  for (const flag of DEFAULT_FLAGS) {
+  for (const flag of REPOMIX_DEFAULT_FLAGS) {
     assert(args.includes(flag), `Expected ${flag} to be included in args`)
   }
 })

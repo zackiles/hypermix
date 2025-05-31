@@ -2,14 +2,14 @@ import { join } from '@std/path'
 
 const APP_NAME = 'hypermix'
 
-const CONFIG_NAMES = [
+const HYPERMIX_CONFIG_NAMES = [
   `${APP_NAME}.config.js`,
   `${APP_NAME}.config.ts`,
   `${APP_NAME}.config.json`,
   `${APP_NAME}.config.jsonc`,
 ] as const
 
-const BOOLEAN_FLAGS = [
+const REPOMIX_BOOLEAN_FLAGS = [
   '--version',
   '--stdout',
   '--parsable-style',
@@ -25,7 +25,6 @@ const BOOLEAN_FLAGS = [
   '--no-git-sort-by-changes',
   '--no-gitignore',
   '--no-default-patterns',
-  '--init',
   '--global',
   '--no-security-check',
   '--mcp',
@@ -35,7 +34,7 @@ const BOOLEAN_FLAGS = [
 
 const DEFAULT_PATH = join(Deno.cwd(), `.${APP_NAME}`)
 
-const DEFAULT_FLAGS = [
+const REPOMIX_DEFAULT_FLAGS = [
   '--remove-empty-lines',
   '--compress',
   '--quiet',
@@ -64,13 +63,13 @@ const FORMATTING_OPTIONS = {
 
 export {
   APP_NAME,
-  BOOLEAN_FLAGS,
-  CONFIG_NAMES,
-  DEFAULT_FLAGS,
   DEFAULT_PATH,
   FORMATTING_OPTIONS,
+  HYPERMIX_CONFIG_NAMES,
   MAKEFILE_SECTION_MARKER,
   MAKEFILE_TASKS,
   NX_EXECUTOR,
+  REPOMIX_BOOLEAN_FLAGS,
+  REPOMIX_DEFAULT_FLAGS,
   VSCODE_TASK_DEFAULTS,
 }

@@ -30,11 +30,49 @@ const PLATFORM_MAP = {
 
 function main() {
   console.log('Testing npm package installation...')
+  console.log(`Working directory: ${process.cwd()}`)
+  console.log(`Script directory: ${__dirname}`)
+  
+  // Determine the package root directory using the same logic as postinstall
+  let packageRoot
+  
+  // Try to find package.json to determine the real package root
+  const possibleRoots = [
+    path.join(__dirname, '..'), // Normal case: scripts is in package root
+    __dirname, // Scripts might be in root
+    process.cwd(), // Current working directory
+    // Try global npm directories as well
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'lib', 'node_modules', 'hypermix') : null,
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'node_modules', 'hypermix') : null,
+  ].filter(Boolean) // Remove null values
+  
+  for (const root of possibleRoots) {
+    const packageJsonPath = path.join(root, 'package.json')
+    if (fs.existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+        if (pkg.name === 'hypermix') {
+          packageRoot = root
+          console.log(`Found package root: ${packageRoot}`)
+          break
+        }
+      } catch (err) {
+        // Continue looking
+      }
+    }
+  }
+  
+  if (!packageRoot) {
+    // Fallback to the original logic
+    packageRoot = path.join(__dirname, '..')
+    console.log(`Using fallback package root: ${packageRoot}`)
+  }
   
   // Check that bin directory exists, create if it doesn't
-  const binDir = path.join(__dirname, '..', 'bin')
+  const binDir = path.join(packageRoot, 'bin')
   if (!fs.existsSync(binDir)) {
     console.log('ℹ️  bin directory does not exist, this likely means postinstall failed')
+    console.log(`Expected bin directory at: ${binDir}`)
     console.log('Creating bin directory for testing...')
     try {
       fs.mkdirSync(binDir, { recursive: true })
@@ -43,6 +81,8 @@ function main() {
       console.error('❌ Failed to create bin directory:', error.message)
       process.exit(1)
     }
+  } else {
+    console.log(`✓ Found bin directory at: ${binDir}`)
   }
   
   // List all files in bin directory

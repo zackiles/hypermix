@@ -296,12 +296,53 @@ async function main() {
   const platformKey = `${platform}-${arch}`
   
   console.log(`Starting postinstall for platform: ${platformKey}`)
+  console.log(`Working directory: ${process.cwd()}`)
+  console.log(`Script directory: ${__dirname}`)
   
-  // Create bin directory first, before any other operations
-  const binDir = path.join(__dirname, '..', 'bin')
+  // Determine the package root directory
+  // When installed normally: __dirname is /path/to/node_modules/hypermix/scripts
+  // When installed globally: __dirname might be different
+  let packageRoot
+  
+  // Try to find package.json to determine the real package root
+  const possibleRoots = [
+    path.join(__dirname, '..'), // Normal case: scripts is in package root
+    __dirname, // Scripts might be in root
+    process.cwd(), // Current working directory
+    // Try global npm directories as well
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'lib', 'node_modules', 'hypermix') : null,
+    process.env.npm_config_prefix ? path.join(process.env.npm_config_prefix, 'node_modules', 'hypermix') : null,
+  ].filter(Boolean) // Remove null values
+  
+  for (const root of possibleRoots) {
+    const packageJsonPath = path.join(root, 'package.json')
+    if (fs.existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+        if (pkg.name === 'hypermix') {
+          packageRoot = root
+          console.log(`Found package root: ${packageRoot}`)
+          break
+        }
+      } catch (err) {
+        // Continue looking
+      }
+    }
+  }
+  
+  if (!packageRoot) {
+    // Fallback to the original logic
+    packageRoot = path.join(__dirname, '..')
+    console.log(`Using fallback package root: ${packageRoot}`)
+  }
+  
+  // Create bin directory relative to package root
+  const binDir = path.join(packageRoot, 'bin')
   if (!fs.existsSync(binDir)) {
-    console.log('Creating bin directory...')
+    console.log(`Creating bin directory at: ${binDir}`)
     fs.mkdirSync(binDir, { recursive: true })
+  } else {
+    console.log(`Bin directory already exists at: ${binDir}`)
   }
   
   const target = TARGET_MAP[platformKey]
@@ -318,12 +359,24 @@ async function main() {
   // Check if binary already exists
   if (fs.existsSync(binaryPath)) {
     console.log(`Binary already exists at ${binaryPath}`)
+    // Ensure it's executable
+    if (!isWindows) {
+      try {
+        fs.chmodSync(binaryPath, 0o755)
+        console.log('Ensured binary is executable')
+      } catch (err) {
+        console.warn('Failed to set executable permissions:', err.message)
+      }
+    }
     return
   }
   
   // Get package version
-  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
+  const packageJsonPath = path.join(packageRoot, 'package.json')
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const version = packageJson.version
+  
+  console.log(`Downloading binary for version: ${version}`)
   
   // Array of potential URLs to try
   const downloadOptions = []
@@ -449,6 +502,12 @@ async function main() {
 if (require.main === module) {
   main().catch((error) => {
     console.error('Postinstall failed:', error)
+    console.error('Stack trace:', error.stack)
+    console.error('\nThis means the hypermix binary could not be downloaded and installed.')
+    console.error('You can try:')
+    console.error('1. Running the installation again: npm install')
+    console.error('2. Checking your internet connection')
+    console.error('3. Manually downloading from: https://github.com/zackiles/hypermix/releases')
     process.exit(1)
   })
 } 
