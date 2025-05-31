@@ -64,7 +64,47 @@ async function downloadFile(url, destPath) {
         
         file.on('finish', () => {
           file.close()
-          resolve()
+          
+          // Validate the downloaded file
+          try {
+            if (!fs.existsSync(destPath)) {
+              reject(new Error('Downloaded file does not exist'))
+              return
+            }
+            
+            const stats = fs.statSync(destPath)
+            if (stats.size === 0) {
+              reject(new Error('Downloaded file is empty'))
+              return
+            }
+            
+            // Check if it's an HTML error page
+            const fileStart = fs.readFileSync(destPath, { encoding: 'utf8', length: 200 })
+            if (fileStart.includes('<html') || fileStart.includes('<!DOCTYPE') || fileStart.includes('<title>')) {
+              reject(new Error('Downloaded file appears to be an HTML error page'))
+              return
+            }
+            
+            // Validate gzip format for .tar.gz files
+            if (destPath.endsWith('.tar.gz')) {
+              const buffer = fs.readFileSync(destPath, { length: 2 })
+              if (buffer[0] !== 0x1f || buffer[1] !== 0x8b) {
+                reject(new Error('Downloaded file is not a valid gzip archive'))
+                return
+              }
+            }
+            
+            console.log(`Downloaded and validated: ${stats.size} bytes`)
+            resolve()
+          } catch (validationError) {
+            // Clean up invalid file
+            try {
+              fs.unlinkSync(destPath)
+            } catch (cleanupErr) {
+              // Ignore cleanup errors
+            }
+            reject(new Error(`File validation failed: ${validationError.message}`))
+          }
         })
         
         file.on('error', (err) => {
@@ -108,8 +148,8 @@ async function downloadFileWithCurl(url, destPath) {
     
     // Try curl first, then wget as fallback
     const commands = [
-      `curl -L -o "${destPath}" "${url}"`,
-      `wget -O "${destPath}" "${url}"`
+      `curl -L -w "%{http_code}" -o "${destPath}" "${url}"`,
+      `wget --server-response -O "${destPath}" "${url}" 2>&1 | grep "HTTP/" | tail -1`
     ]
     
     let lastError = null
@@ -121,26 +161,67 @@ async function downloadFileWithCurl(url, destPath) {
       }
       
       const command = commands[index]
-      console.log(`Trying: ${command}`)
+      const isCurl = command.includes('curl')
+      console.log(`Trying: ${isCurl ? 'curl' : 'wget'} download`)
       
       try {
-        execSync(command, { stdio: 'pipe', timeout: 60000 })
+        const result = execSync(command, { encoding: 'utf8', timeout: 60000 })
         
-        // Check if file was created and has content
-        if (fs.existsSync(destPath)) {
-          const stats = fs.statSync(destPath)
-          if (stats.size > 0) {
-            console.log(`Successfully downloaded with ${command.split(' ')[0]}`)
-            resolve()
-            return
+        // Validate the download
+        if (!fs.existsSync(destPath)) {
+          throw new Error('Downloaded file does not exist')
+        }
+        
+        const stats = fs.statSync(destPath)
+        if (stats.size === 0) {
+          throw new Error('Downloaded file is empty')
+        }
+        
+        // Check if it's an HTML error page (common for 404s)
+        const fileStart = fs.readFileSync(destPath, { encoding: 'utf8', length: 100 })
+        if (fileStart.includes('<html') || fileStart.includes('<!DOCTYPE')) {
+          throw new Error('Downloaded file appears to be an HTML error page')
+        }
+        
+        // For curl, check the HTTP status code
+        if (isCurl) {
+          const httpCode = result.trim()
+          const statusCode = Number.parseInt(httpCode.slice(-3)) // Get last 3 characters
+          if (statusCode >= 400) {
+            throw new Error(`HTTP ${statusCode} error`)
+          }
+          console.log(`HTTP status: ${statusCode}`)
+        }
+        
+        // Validate file format for tar.gz files
+        if (destPath.endsWith('.tar.gz')) {
+          try {
+            // Test if it's a valid gzip file by reading the magic bytes
+            const buffer = fs.readFileSync(destPath, { length: 2 })
+            if (buffer[0] !== 0x1f || buffer[1] !== 0x8b) {
+              throw new Error('File is not a valid gzip archive')
+            }
+          } catch (readError) {
+            throw new Error(`Invalid gzip file: ${readError.message}`)
           }
         }
         
-        // File doesn't exist or is empty, try next method
-        tryCommand(index + 1)
+        console.log(`Successfully downloaded and validated with ${isCurl ? 'curl' : 'wget'} (${stats.size} bytes)`)
+        resolve()
+        
       } catch (error) {
-        console.log(`${command.split(' ')[0]} failed: ${error.message}`)
+        console.log(`${isCurl ? 'curl' : 'wget'} failed: ${error.message}`)
         lastError = error
+        
+        // Clean up the invalid file
+        try {
+          if (fs.existsSync(destPath)) {
+            fs.unlinkSync(destPath)
+          }
+        } catch (cleanupErr) {
+          // Ignore cleanup errors
+        }
+        
         tryCommand(index + 1)
       }
     }
