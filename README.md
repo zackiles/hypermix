@@ -8,7 +8,7 @@
   </div></br>
   <p>
     <a href="https://www.npmjs.com/package/hypermix"><img src="https://img.shields.io/npm/v/hypermix.svg" alt="npm version"></a>
-    <a href="https://jsr.io/@deno-kit/kit"><img   src="https://jsr.io/badges/@deno-kit/kit">
+    <a href="https://jsr.io/@zackiles/hypermix"><img   src="https://jsr.io/badges/@zackiles/hypermix">
     </a>
     <a href="https://github.com/zackiles/hypermix/actions/workflows/release.yml">
       <img src="https://github.com/zackiles/hypermix/actions/workflows/release.yml/badge.svg" alt="Release">

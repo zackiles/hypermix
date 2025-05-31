@@ -295,6 +295,15 @@ async function main() {
   const arch = process.arch
   const platformKey = `${platform}-${arch}`
   
+  console.log(`Starting postinstall for platform: ${platformKey}`)
+  
+  // Create bin directory first, before any other operations
+  const binDir = path.join(__dirname, '..', 'bin')
+  if (!fs.existsSync(binDir)) {
+    console.log('Creating bin directory...')
+    fs.mkdirSync(binDir, { recursive: true })
+  }
+  
   const target = TARGET_MAP[platformKey]
   if (!target) {
     console.error(`Unsupported platform: ${platformKey}`)
@@ -304,13 +313,7 @@ async function main() {
   
   const isWindows = platform === 'win32'
   const binaryName = `${APP_NAME}-${target}${isWindows ? '.exe' : ''}`
-  const binDir = path.join(__dirname, '..', 'bin')
   const binaryPath = path.join(binDir, binaryName)
-  
-  // Create bin directory if it doesn't exist
-  if (!fs.existsSync(binDir)) {
-    fs.mkdirSync(binDir, { recursive: true })
-  }
   
   // Check if binary already exists
   if (fs.existsSync(binaryPath)) {

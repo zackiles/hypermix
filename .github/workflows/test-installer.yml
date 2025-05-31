@@ -1,17 +1,11 @@
 name: Test Installer
 
 on:
-  workflow_run:
-    workflows: ["Release to GitHub"]
-    types:
-      - completed
-    branches:
-      - main
+  release:
+    types: [published]
 
 jobs:
   test-npm-installer:
-    # Only run if the Release to GitHub workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:

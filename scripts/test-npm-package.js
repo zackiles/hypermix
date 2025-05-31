@@ -31,11 +31,18 @@ const PLATFORM_MAP = {
 function main() {
   console.log('Testing npm package installation...')
   
-  // Check that bin directory exists
+  // Check that bin directory exists, create if it doesn't
   const binDir = path.join(__dirname, '..', 'bin')
   if (!fs.existsSync(binDir)) {
-    console.error('❌ bin directory does not exist')
-    process.exit(1)
+    console.log('ℹ️  bin directory does not exist, this likely means postinstall failed')
+    console.log('Creating bin directory for testing...')
+    try {
+      fs.mkdirSync(binDir, { recursive: true })
+      console.log('✓ Created bin directory')
+    } catch (error) {
+      console.error('❌ Failed to create bin directory:', error.message)
+      process.exit(1)
+    }
   }
   
   // List all files in bin directory
@@ -46,7 +53,9 @@ function main() {
   }
   
   if (files.length === 0) {
-    console.error('❌ No files found in bin directory')
+    console.error('❌ No binaries found in bin directory')
+    console.error('This indicates that the postinstall script failed to download binaries')
+    console.error('Check the npm install logs above for download errors')
     process.exit(1)
   }
   

@@ -19,7 +19,6 @@
     "scripts/launcher.js",
     "scripts/postinstall.js",
     "scripts/test-npm-package.js",
-    "bin/.gitkeep",
     "README.md",
     "LICENSE"
   ],
