@@ -32,6 +32,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Test npm package locally
+        shell: bash
         run: |
           echo "Testing npm package installation on ${{ matrix.os }} with Node ${{ matrix.node }}"
           
@@ -45,12 +46,12 @@ jobs:
           
           # Debug package contents
           echo "Package contents:"
-          if ("${{ runner.os }}" -eq "Windows") {
+          if [ "${{ runner.os }}" = "Windows" ]; then
             tar -xf "$PACKAGE_FILE" -O package/package.json
-            tar -tvf "$PACKAGE_FILE" | Select-String -NotMatch "node_modules"
-          } else {
             tar -tvf "$PACKAGE_FILE" | grep -v "node_modules"
-          }
+          else
+            tar -tvf "$PACKAGE_FILE" | grep -v "node_modules"
+          fi
           
           echo "Installing package globally..."
           npm install -g "$PACKAGE_FILE"
@@ -86,14 +87,15 @@ jobs:
 
       - name: Cleanup
         if: always()
+        shell: bash
         run: |
           echo "Cleaning up test artifacts..."
           npm uninstall -g hypermix || true
           
           # Use OS-specific command for file removal
-          if ("${{ runner.os }}" -eq "Windows") {
-            Remove-Item -Path hypermix-*.tgz -Force -ErrorAction SilentlyContinue
-          } else {
+          if [ "${{ runner.os }}" = "Windows" ]; then
             rm -f hypermix-*.tgz || true
-          }
+          else
+            rm -f hypermix-*.tgz || true
+          fi
           echo "✓ Cleanup completed" 
