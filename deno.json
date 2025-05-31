@@ -80,6 +80,14 @@
       "scripts/test-npm-package.js"
     ]
   },
+  "publish": {
+    "include": [
+      "src/**/**",
+      "README.md",
+      "deno.json",
+      "LICENSE"
+    ]
+  },
   "exports": {
     ".": "./src/mod.ts"
   }
