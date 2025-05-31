@@ -73,6 +73,14 @@ deno add -g jsr:@zackiles/hypermix
 npm install -g hypermix
 ```
 
+### Uninstalling
+
+Local and global installations can be removed by running:
+
+```bash
+hypermix uninstall
+```
+
 ## Usage
 
 In general, a design goal of Hypermix is not having to access it at all once you've installed it. However, if you'd rather manage the lifecycle of your mixes yourself, or access Hypermix programmatically you can. All options and configuration have intelligent safe defaults.

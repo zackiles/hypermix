@@ -9,6 +9,18 @@ const HYPERMIX_CONFIG_NAMES = [
   `${APP_NAME}.config.jsonc`,
 ] as const
 
+const PROJECT_CONFIG_FILES = [
+  'package.json',
+  'package.jsonc',
+  'deno.json',
+  'deno.jsonc',
+  'project.json',
+  'project.jsonc',
+  'tasks.json',
+  'tasks.jsonc',
+  'Makefile',
+] as const
+
 const REPOMIX_BOOLEAN_FLAGS = [
   '--version',
   '--stdout',
@@ -114,6 +126,7 @@ export {
   MAKEFILE_SECTION_MARKER,
   MAKEFILE_TASKS,
   NX_EXECUTOR,
+  PROJECT_CONFIG_FILES,
   REPOMIX_BOOLEAN_FLAGS,
   REPOMIX_DEFAULT_FLAGS,
   VSCODE_TASK_DEFAULTS,

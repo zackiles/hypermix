@@ -18,12 +18,7 @@ import { parse as parseJsonc } from 'jsonc-parser'
 import { green, yellow } from '@std/fmt/colors'
 import { HYPERMIX_CONFIG_NAMES } from './constants.ts'
 import type { HypermixConfig, RepomixConfig } from './types.ts'
-
-type Logger = {
-  log: (...args: unknown[]) => void
-  warn: (...args: unknown[]) => void
-  error: (...args: unknown[]) => void
-}
+import { logger } from './logger.ts'
 
 async function findHypermixConfigPath(): Promise<string> {
   for (const configName of HYPERMIX_CONFIG_NAMES) {
@@ -86,7 +81,6 @@ async function normalizeAndValidateGithubRepo(
 async function addMixToConfigFile(
   configPath: string,
   newMix: RepomixConfig,
-  logger: Logger,
 ): Promise<boolean> {
   const rawContent = await Deno.readTextFile(configPath)
   const isJsonFile = configPath.endsWith('.json') ||
@@ -185,7 +179,6 @@ async function addMixToConfigFile(
 
 export async function handleAddCommand(
   repoIdentifier: string,
-  logger: Logger,
 ): Promise<void> {
   try {
     // Find config file
@@ -206,7 +199,7 @@ export async function handleAddCommand(
     }
 
     // Add to config file
-    const added = await addMixToConfigFile(configPath, newMix, logger)
+    const added = await addMixToConfigFile(configPath, newMix)
 
     if (!added) {
       Deno.exit(0)

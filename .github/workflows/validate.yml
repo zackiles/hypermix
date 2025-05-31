@@ -43,7 +43,7 @@ jobs:
     needs: check-skip
     if: ${{ needs.check-skip.outputs.should-skip != 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

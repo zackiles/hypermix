@@ -24,20 +24,9 @@ import {
   MAKEFILE_SECTION_MARKER,
   MAKEFILE_TASKS,
   NX_EXECUTOR,
+  PROJECT_CONFIG_FILES,
   VSCODE_TASK_DEFAULTS,
 } from './constants.ts'
-
-const PROJECT_CONFIG_FILES = [
-  'package.json',
-  'package.jsonc',
-  'deno.json',
-  'deno.jsonc',
-  'project.json',
-  'project.jsonc',
-  'tasks.json',
-  'tasks.jsonc',
-  'Makefile',
-] as const
 
 type ProjectConfigFile = typeof PROJECT_CONFIG_FILES[number]
 type TaskDefinition = Record<string, string>

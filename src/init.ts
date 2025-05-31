@@ -1,6 +1,7 @@
 import { ensureDir, exists, expandGlob } from '@std/fs'
 import { basename, dirname, join, relative } from '@std/path'
 import { APP_NAME, CURSOR_RULE_TEMPLATE } from './constants.ts'
+import { logger } from './logger.ts'
 
 type ProjectType = 'typescript' | 'javascript' | 'unknown'
 
@@ -83,11 +84,11 @@ async function detectProjectType(): Promise<ProjectType> {
   for (const { name, test, type } of tests) {
     try {
       if (await test()) {
-        console.log(`✓ Detected ${type} project (${name})`)
+        logger.log(`✓ Detected ${type} project (${name})`)
         return type
       }
     } catch (error) {
-      console.warn(`Failed to run test "${name}":`, error)
+      logger.warn(`Failed to run test "${name}":`, error)
     }
   }
 
@@ -145,14 +146,14 @@ async function checkAndInstallRepomix(): Promise<void> {
     const { success } = await command.output()
 
     if (success) {
-      console.log('✓ Repomix is already installed')
+      logger.log('✓ Repomix is already installed')
       return
     }
   } catch {
     // Command not found
   }
 
-  console.log('Installing repomix...')
+  logger.log('Installing repomix...')
 
   // Detect package manager
   const hasDeno = await exists(join(Deno.cwd(), 'deno.json')) ||
@@ -166,7 +167,7 @@ async function checkAndInstallRepomix(): Promise<void> {
   } else if (hasPackageJson) {
     installCommand = ['npm', 'install', 'repomix', '--save-dev']
   } else {
-    console.warn(
+    logger.warn(
       'No package manager detected. Please install repomix manually.',
     )
     return
@@ -181,9 +182,9 @@ async function checkAndInstallRepomix(): Promise<void> {
   const { success } = await command.output()
 
   if (success) {
-    console.log('✓ Repomix installed successfully')
+    logger.log('✓ Repomix installed successfully')
   } else {
-    console.warn('Failed to install repomix. Please install it manually.')
+    logger.warn('Failed to install repomix. Please install it manually.')
   }
 }
 
@@ -306,17 +307,17 @@ async function copyCursorRule(outputFile: string): Promise<void> {
 }
 
 async function init(): Promise<void> {
-  console.log(`Initializing ${APP_NAME} project...`)
+  logger.log(`Initializing ${APP_NAME} project...`)
 
   // 1. Determine config file name and write initial config
   const configFileName = await getConfigFileName()
   const configPath = join(Deno.cwd(), configFileName)
 
   if (await exists(configPath)) {
-    console.log(`✓ Found existing ${configFileName}`)
+    logger.log(`✓ Found existing ${configFileName}`)
   } else {
     await writeHypermixConfig(configPath)
-    console.log(`✓ Created ${configFileName}`)
+    logger.log(`✓ Created ${configFileName}`)
   }
 
   // 2. Check and install repomix if needed
@@ -325,22 +326,22 @@ async function init(): Promise<void> {
   // 3. Create .hypermix directory
   const hypermixDir = join(Deno.cwd(), '.hypermix')
   await ensureDir(hypermixDir)
-  console.log('✓ Created .hypermix directory')
+  logger.log('✓ Created .hypermix directory')
 
   // 4. Find source folders and create repomix config
   const sourceFolders = await findSourceFolders()
 
   if (sourceFolders.length > 0) {
-    console.log(`✓ Found source folders: ${sourceFolders.join(', ')}`)
+    logger.log(`✓ Found source folders: ${sourceFolders.join(', ')}`)
 
     // Update hypermix config with mixes
     await updateHypermixConfigWithMixes(configPath)
 
     // Write repomix config
     await writeRepomixConfig(sourceFolders)
-    console.log('✓ Created repomix.config.json')
+    logger.log('✓ Created repomix.config.json')
   } else {
-    console.warn(
+    logger.warn(
       '⚠ No source folders found. Please configure repomix.config.json manually.',
     )
   }
@@ -348,10 +349,10 @@ async function init(): Promise<void> {
   // 5. Copy cursor rule template
   const outputFile = `${basename(Deno.cwd())}-main-repomix.xml`
   await copyCursorRule(outputFile)
-  console.log('✓ Created .cursor/rules/hypermix/cursor-rule.mdx')
+  logger.log('✓ Created .cursor/rules/hypermix/cursor-rule.mdx')
 
   // 6. Success message
-  console.log(`
+  logger.log(`
 ✨ ${APP_NAME} is now set up!
 
 You can now edit:

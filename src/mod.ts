@@ -67,6 +67,8 @@ import { countTokens } from 'gpt-tokenizer/model/gpt-4o'
 import { toTransformStream } from '@std/streams/to-transform-stream'
 import { parse as parseJsonc } from 'jsonc-parser'
 import { loadConfig } from './load-config.ts'
+import { logger } from './logger.ts'
+import { init } from './init.ts'
 import {
   DEFAULT_PATH,
   REPOMIX_BOOLEAN_FLAGS,
@@ -74,17 +76,9 @@ import {
 } from './constants.ts'
 import type { RepomixConfig } from './types.ts'
 import { handleAddCommand } from './add-mix.ts'
+import { deleteSelf } from './uninstall.ts'
 
 let globalArgs: ReturnType<typeof parseArgs>
-let logger: ReturnType<typeof createLogger>
-
-const createLogger = (silent: boolean) => ({
-  log: (...args: unknown[]) => !silent && console.log(...args),
-  warn: (...args: unknown[]) => console.warn(...args),
-  error: (...args: unknown[]) => console.error(...args),
-  debug: (...args: unknown[]) =>
-    !silent && Deno.env.get('DEBUG') && console.log('[DEBUG]', ...args),
-})
 
 const createFileHelpers = () => {
   const kebabFilename = (path: string) => {
@@ -485,10 +479,17 @@ async function main() {
   const firstArg = Deno.args[0]
   const secondArg = Deno.args[1]
 
-  if (firstArg === 'add') {
-    const isSilent = Deno.args.includes('--silent') || Deno.args.includes('-s')
-    logger = createLogger(isSilent)
+  if (firstArg === 'init') {
+    await init()
+    return
+  }
 
+  if (firstArg === 'uninstall') {
+    await deleteSelf()
+    return
+  }
+
+  if (firstArg === 'add') {
     if (!secondArg) {
       logger.error(
         red('Error: Missing repository identifier for "add" command.'),
@@ -496,15 +497,7 @@ async function main() {
       logger.log('Usage: hypermix add <owner/repo | GitHub URL>')
       Deno.exit(1)
     }
-    await handleAddCommand(secondArg, logger)
-    return
-  }
-
-  if (firstArg === 'init') {
-    const isSilent = Deno.args.includes('--silent') || Deno.args.includes('-s')
-    logger = createLogger(isSilent)
-    const { init } = await import('./init.ts')
-    await init()
+    await handleAddCommand(secondArg)
     return
   }
 
@@ -518,7 +511,6 @@ async function main() {
       'help': ['h'],
     },
   })
-  logger = createLogger(globalArgs.silent ?? false)
 
   // Handle --help flag
   if (globalArgs.help) {

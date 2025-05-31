@@ -53,6 +53,7 @@
     "denoland",
     "dockerenv",
     "dotenv",
+    "dryrun",
     "FOSS",
     "fseventsd",
     "hiberfil",
