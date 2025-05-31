@@ -1,18 +1,23 @@
 name: Publish to JSR
 
 on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_run:
-    workflows: ["Test Installer"]
+    workflows: ["Test Deno"]
     types:
       - completed
+    branches:
+      - main
 
 jobs:
-  # This job relies on the test-installer job in the test-install.yml workflow
   publish-jsr:
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      contains(github.event.workflow_run.head_commit.message, 'chore: tag version v')
+      github.event_name == 'push' || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       id-token: write
@@ -22,18 +27,35 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+          cache: true
 
-      - name: Create bin directory
-        run: mkdir -p bin
-
-      - name: Run Build Task
-        run: deno task build
+      - name: Log workflow context
+        run: |
+          echo "Publishing to JSR for tag: ${GITHUB_REF#refs/tags/}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Triggered by: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "After successful Test Deno workflow"
+          fi
+          
+      - name: Verify deno.json exists
+        run: |
+          if [ ! -f "deno.json" ]; then
+            echo "ERROR: deno.json not found in repository root"
+            exit 1
+          fi
+          echo "✓ Found deno.json"
+          echo "Package info:"
+          cat deno.json | grep -E '"name"|"version"' || true
 
       - name: Publish to JSR
-        run: npx jsr publish --no-check
+        run: |
+          echo "Publishing to JSR registry..."
+          npx jsr publish --no-check
+          echo "✓ Successfully published to JSR"

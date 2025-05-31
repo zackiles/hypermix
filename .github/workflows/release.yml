@@ -1,45 +1,23 @@
-name: release-github
+name: Release to GitHub
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_run:
+    workflows: ["Test Deno"]
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Git
-        run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: 2.x
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gnupg zip unzip
-
-      - name: Install Git LFS
-        run: |
-          sudo apt-get install -y git-lfs
-          git lfs install
-
-      - name: Run tests
-        run: deno task test
-
   build-and-release:
-    needs: test
+    if: >
+      github.event_name == 'push' || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Add explicit permissions for releases
     permissions:
       contents: write
@@ -51,17 +29,13 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: 2.x
+          deno-version: v2.x
+          cache: true
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y zip unzip tar
-
-      - name: Install Git LFS
-        run: |
-          sudo apt-get install -y git-lfs
-          git lfs install
 
       - name: Get tag name
         id: get_tag

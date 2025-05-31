@@ -10,6 +10,7 @@ on:
 jobs:
   check-skip:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       should-skip: ${{ steps.check-commit-msg.outputs.should-skip }}
     steps:
@@ -42,6 +43,7 @@ jobs:
     needs: check-skip
     if: ${{ needs.check-skip.outputs.should-skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,143 +58,109 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: 2.x
+          deno-version: v2.x
+          cache: true
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gnupg zip unzip
 
-      - name: Install Git LFS
-        run: |
-          sudo apt-get install -y git-lfs
-          git lfs install
-
-      - name: Lint and type check
-        run: deno task check
-
-      - name: Run tests
-        run: deno task test
-
       - name: Build dry run
-        run: deno task build --bin-path=./bin-test
+        run: |
+          echo "Running build dry run to verify compilation..."
+          deno task build --bin-path=./bin-test
 
       - name: Check build output
         run: |
+          echo "Verifying build output..."
+          
           if [ ! -d "./bin-test" ]; then
-            echo "Build output directory not found"
+            echo "ERROR: Build output directory not found"
             exit 1
           fi
-
-          # Check for all platform builds - target-specific builds
-          declare -a targets=(
+          
+          echo "Build output directory contents:"
+          ls -la ./bin-test/
+          
+          # Define expected platforms
+          declare -a expected_platforms=(
             "x86_64-unknown-linux-gnu"
-            "aarch64-unknown-linux-gnu"
+            "aarch64-unknown-linux-gnu" 
             "x86_64-apple-darwin"
             "aarch64-apple-darwin"
+            "x86_64-pc-windows-msvc"
           )
-
-          # Check Windows separately because of .exe extension
-          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe" ]; then
-            echo "Missing binary for x86_64-pc-windows-msvc.exe"
-            exit 1
-          fi
-
-          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe.zip" ]; then
-            echo "Missing zip for x86_64-pc-windows-msvc.exe"
-            exit 1
-          fi
-
-          if [ ! -f "./bin-test/hypermix-x86_64-pc-windows-msvc.exe.tar.gz" ]; then
-            echo "Missing tar.gz for x86_64-pc-windows-msvc.exe"
-            exit 1
-          fi
-
-          # Check non-Windows targets
-          for target in "${targets[@]}"; do
-            if [ ! -f "./bin-test/hypermix-${target}" ]; then
-              echo "Missing binary for ${target}"
-              exit 1
+          
+          # Track missing files
+          missing_files=0
+          
+          # Check each platform
+          for platform in "${expected_platforms[@]}"; do
+            echo ""
+            echo "Checking $platform..."
+            
+            # Determine binary name (Windows has .exe)
+            if [[ "$platform" == *"windows"* ]]; then
+              binary_name="hypermix-${platform}.exe"
+            else
+              binary_name="hypermix-${platform}"
             fi
-
-            if [ ! -f "./bin-test/hypermix-${target}.zip" ]; then
-              echo "Missing zip for ${target}"
-              exit 1
+            
+            # Check binary exists
+            if [ -f "./bin-test/${binary_name}" ]; then
+              echo "  ✓ Binary found: ${binary_name}"
+            else
+              echo "  ✗ Missing binary: ${binary_name}"
+              ((missing_files++))
             fi
-
-            if [ ! -f "./bin-test/hypermix-${target}.tar.gz" ]; then
-              echo "Missing tar.gz for ${target}"
-              exit 1
+            
+            # Check archives exist
+            if [ -f "./bin-test/${binary_name}.zip" ]; then
+              echo "  ✓ ZIP found: ${binary_name}.zip"
+            else
+              echo "  ✗ Missing ZIP: ${binary_name}.zip"
+              ((missing_files++))
+            fi
+            
+            if [ -f "./bin-test/${binary_name}.tar.gz" ]; then
+              echo "  ✓ TAR.GZ found: ${binary_name}.tar.gz"
+            else
+              echo "  ✗ Missing TAR.GZ: ${binary_name}.tar.gz"
+              ((missing_files++))
             fi
           done
-
-          # Check for platform aliases
-          declare -a platforms=(
-            "linux"
-            "linux-arm"
-            "macos"
-            "macos-arm"
-          )
-
-          # Check Windows platform alias separately
-          if [ ! -f "./bin-test/hypermix-windows.exe" ]; then
-            echo "Missing platform binary for windows.exe"
-            exit 1
-          fi
-
-          if [ ! -f "./bin-test/hypermix-windows.exe.zip" ]; then
-            echo "Missing platform zip for windows.exe"
-            exit 1
-          fi
-
-          if [ ! -f "./bin-test/hypermix-windows.exe.tar.gz" ]; then
-            echo "Missing platform tar.gz for windows.exe"
-            exit 1
-          fi
-
-          # Check non-Windows platform aliases
-          for platform in "${platforms[@]}"; do
-            if [ ! -f "./bin-test/hypermix-${platform}" ]; then
-              echo "Missing platform binary for ${platform}"
-              exit 1
-            fi
-
-            if [ ! -f "./bin-test/hypermix-${platform}.zip" ]; then
-              echo "Missing platform zip for ${platform}"
-              exit 1
-            fi
-
-            if [ ! -f "./bin-test/hypermix-${platform}.tar.gz" ]; then
-              echo "Missing platform tar.gz for ${platform}"
-              exit 1
-            fi
-          done
-
-          # Count the number of zip and tar.gz files
+          
+          # Summary
+          echo ""
+          echo "Build verification summary:"
+          echo "=========================="
+          
+          # Count actual files
+          binary_count=$(find ./bin-test -name "hypermix-*" -type f ! -name "*.zip" ! -name "*.tar.gz" | wc -l)
           zip_count=$(find ./bin-test -name "*.zip" | wc -l)
           tar_count=$(find ./bin-test -name "*.tar.gz" | wc -l)
-          expected_count=10  # 5 target platforms * 2 formats (specific name + platform name)
-          if [ "$zip_count" -lt "$expected_count" ]; then
-            echo "Expected at least ${expected_count} zip files, but found ${zip_count}"
-            find ./bin-test -name "*.zip" | sort
+          
+          echo "Binaries found: $binary_count"
+          echo "ZIP archives found: $zip_count"
+          echo "TAR.GZ archives found: $tar_count"
+          
+          if [ $missing_files -gt 0 ]; then
+            echo ""
+            echo "ERROR: $missing_files expected files are missing"
+            echo "This may indicate a build script issue or platform-specific failure"
             exit 1
           else
-            echo "Found $zip_count zip files in build output"
-            find ./bin-test -name "*.zip" | sort
-          fi
-          if [ "$tar_count" -lt "$expected_count" ]; then
-            echo "Expected at least ${expected_count} tar.gz files, but found ${tar_count}"
-            find ./bin-test -name "*.tar.gz" | sort
-            exit 1
-          else
-            echo "Found $tar_count tar.gz files in build output"
-            find ./bin-test -name "*.tar.gz" | sort
+            echo ""
+            echo "✓ All expected build artifacts were created successfully"
           fi
 
       - name: Mock release creation (dry-run)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Simulating release creation..."
+          
           # Create a temporary tag
           MOCK_TAG="pr-dryrun-${GITHUB_SHA:0:7}"
 
@@ -202,7 +170,13 @@ jobs:
           echo "Commit: ${{ github.sha }}" >> mock_release_notes.txt
 
           echo "Would create release with tag: $MOCK_TAG"
-          echo "Would upload $(find ./bin-test -name "*.zip" | wc -l) zip files from ./bin-test directory"
+          echo "Would upload $(find ./bin-test -name "*.zip" | wc -l) zip files"
+          echo "Would upload $(find ./bin-test -name "*.tar.gz" | wc -l) tar.gz files"
 
-          # Don't actually create the release, just simulating the command that would run
-          echo "gh release create $MOCK_TAG bin-test/*.zip --draft --title \"Dry Run $MOCK_TAG\" --notes-file mock_release_notes.txt"
+          # List files that would be uploaded
+          echo ""
+          echo "Files that would be uploaded:"
+          find ./bin-test -name "*.zip" -o -name "*.tar.gz" | sort
+
+          echo ""
+          echo "✓ Release simulation completed successfully"

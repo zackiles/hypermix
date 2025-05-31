@@ -12,6 +12,7 @@
   "tasks": {
     "dev": "deno run -A src/mod.ts --config examples/hypermix.config.ts",
     "check": "deno lint && deno check src/main.ts",
+    "test": "deno test -A test/",
     "tag": "deno run -A scripts/tag.ts",
     "serve-docs": "deno run -A scripts/serve-docs.ts",
     "build": "deno run -A scripts/build.ts",

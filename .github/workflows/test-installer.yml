@@ -4,10 +4,20 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_run:
+    workflows: ["Test Deno"]
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
   test-npm-installer:
+    if: >
+      github.event_name == 'push' || 
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -23,17 +33,48 @@ jobs:
 
       - name: Test npm package locally
         run: |
+          echo "Testing npm package installation on ${{ matrix.os }} with Node ${{ matrix.node }}"
+          
           # Test the npm package can be installed
+          echo "Creating npm package..."
           npm pack
-          npm install -g hypermix-*.tgz
+          
+          # Find the created package file
+          PACKAGE_FILE=$(ls hypermix-*.tgz)
+          echo "✓ Created package: $PACKAGE_FILE"
+          
+          echo "Installing package globally..."
+          npm install -g "$PACKAGE_FILE"
+          echo "✓ Package installed globally"
           
           # Test that hypermix command is available
-          hypermix --version || hypermix --help
+          echo "Testing hypermix command availability..."
+          if hypermix --version; then
+            echo "✓ hypermix --version succeeded"
+          elif hypermix --help; then
+            echo "✓ hypermix --help succeeded (version command may not be implemented)"
+          else
+            echo "ERROR: hypermix command not found or failed to execute"
+            echo "PATH: $PATH"
+            echo "npm bin location: $(npm bin -g)"
+            exit 1
+          fi
           
           # Test npx usage
-          npx hypermix --help
+          echo "Testing npx usage..."
+          if npx hypermix --help; then
+            echo "✓ npx hypermix --help succeeded"
+          else
+            echo "ERROR: npx hypermix failed"
+            exit 1
+          fi
+          
+          echo "✓ All tests passed on ${{ matrix.os }} with Node ${{ matrix.node }}"
 
       - name: Cleanup
+        if: always()
         run: |
-          npm uninstall -g hypermix
-          rm -f hypermix-*.tgz 
+          echo "Cleaning up test artifacts..."
+          npm uninstall -g hypermix || true
+          rm -f hypermix-*.tgz || true
+          echo "✓ Cleanup completed" 
