@@ -4,18 +4,9 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_run:
-    workflows: ["Test Deno"]
-    types:
-      - completed
-    branches:
-      - main
 
 jobs:
   build-and-release:
-    if: >
-      github.event_name == 'push' || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Add explicit permissions for releases
@@ -25,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -87,18 +80,32 @@ jobs:
           done
           echo "All required build artifacts have been verified."
 
-      - name: Delete existing release if it exists
+      - name: Check if release exists
+        id: check_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
         run: |
-          gh release delete ${{ steps.get_tag.outputs.TAG }} --yes || true
+          if gh release view ${{ steps.get_tag.outputs.TAG }} &>/dev/null; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete existing release if it exists
+        if: steps.check_release.outputs.EXISTS == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Deleting existing release: ${{ steps.get_tag.outputs.TAG }}"
+          gh release delete ${{ steps.get_tag.outputs.TAG }} --yes
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Upload both zip and tar.gz files
+          echo "Creating release: ${{ steps.get_tag.outputs.TAG }}"
+          
           gh release create ${{ steps.get_tag.outputs.TAG }} \
             bin/*.zip \
             bin/*.tar.gz \

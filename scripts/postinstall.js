@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const https = require('node:https')
 const { execSync } = require('node:child_process')
+const os = require('node:os')
 
 const APP_NAME = 'hypermix'
 
@@ -50,6 +51,66 @@ async function downloadFile(url, destPath) {
   })
 }
 
+async function extractArchive(archivePath, targetDir, isZip) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hypermix-'))
+  try {
+    if (isZip) {
+      if (process.platform === 'win32') {
+        // Windows - use PowerShell
+        execSync(`powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tmpDir}' -Force"`)
+      } else {
+        // Unix - use unzip
+        execSync(`unzip -o "${archivePath}" -d "${tmpDir}"`)
+      }
+    } else {
+      // Use tar for .tar.gz
+      execSync(`tar -xzf "${archivePath}" -C "${tmpDir}"`)
+    }
+    
+    // Find the binary in the extracted files
+    const isWindows = process.platform === 'win32'
+    const binaryPattern = `${APP_NAME}-*${isWindows ? '.exe' : ''}`
+    let binaryFiles
+    
+    if (isWindows) {
+      // Windows
+      const output = execSync(`dir /b "${tmpDir}" | findstr "${binaryPattern}"`, { encoding: 'utf8' })
+      binaryFiles = output.trim().split('\r\n')
+    } else {
+      // Unix
+      const output = execSync(`find "${tmpDir}" -name "${binaryPattern}" -type f`, { encoding: 'utf8' })
+      binaryFiles = output.trim().split('\n')
+    }
+    
+    // Filter out empty entries
+    binaryFiles = binaryFiles.filter(file => file.trim().length > 0)
+    
+    if (binaryFiles.length === 0) {
+      throw new Error('No binary found in the archive')
+    }
+    
+    // Get the full path of the binary
+    const binaryPath = isWindows 
+      ? path.join(tmpDir, binaryFiles[0])
+      : binaryFiles[0]
+    
+    // Copy the binary to the target directory
+    fs.copyFileSync(binaryPath, path.join(targetDir, path.basename(binaryPath)))
+    
+    // Make binary executable on Unix-like systems
+    if (!isWindows) {
+      fs.chmodSync(path.join(targetDir, path.basename(binaryPath)), 0o755)
+    }
+  } finally {
+    // Clean up
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    } catch (error) {
+      console.warn(`Failed to clean up temp directory: ${error.message}`)
+    }
+  }
+}
+
 async function main() {
   const platform = process.platform
   const arch = process.arch
@@ -82,22 +143,30 @@ async function main() {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
   const version = packageJson.version
   
-  // Download binary from GitHub releases
-  const downloadUrl = `https://github.com/zackiles/hypermix/releases/download/v${version}/${binaryName}`
-  console.log(`Downloading ${APP_NAME} binary for ${platformKey}...`)
+  // Determine which archive format to use
+  const useZip = isWindows
+  const archiveExt = useZip ? '.zip' : '.tar.gz'
+  const archiveName = `${binaryName}${archiveExt}`
+  const archivePath = path.join(os.tmpdir(), archiveName)
+  
+  // Download archive from GitHub releases
+  const downloadUrl = `https://github.com/zackiles/hypermix/releases/download/v${version}/${archiveName}`
+  console.log(`Downloading ${APP_NAME} archive for ${platformKey}...`)
   console.log(`URL: ${downloadUrl}`)
   
   try {
-    await downloadFile(downloadUrl, binaryPath)
-    console.log(`Downloaded binary to ${binaryPath}`)
+    await downloadFile(downloadUrl, archivePath)
+    console.log(`Downloaded archive to ${archivePath}`)
     
-    // Make binary executable on Unix-like systems
-    if (!isWindows) {
-      fs.chmodSync(binaryPath, 0o755)
-      console.log('Made binary executable')
-    }
+    // Extract the archive
+    console.log('Extracting binary...')
+    await extractArchive(archivePath, binDir, useZip)
+    console.log(`Extracted binary to ${binaryPath}`)
+    
+    // Cleanup
+    fs.unlinkSync(archivePath)
   } catch (error) {
-    console.error('Failed to download binary:', error.message)
+    console.error('Failed to download or extract binary:', error.message)
     console.error('\nYou can manually download the binary from:')
     console.error(`https://github.com/zackiles/hypermix/releases/tag/v${version}`)
     process.exit(1)

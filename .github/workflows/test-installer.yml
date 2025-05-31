@@ -76,5 +76,11 @@ jobs:
         run: |
           echo "Cleaning up test artifacts..."
           npm uninstall -g hypermix || true
-          rm -f hypermix-*.tgz || true
+          
+          # Use OS-specific command for file removal
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            del /q hypermix-*.tgz 2>nul || echo "No files to delete"
+          else
+            rm -f hypermix-*.tgz || true
+          fi
           echo "✓ Cleanup completed" 
