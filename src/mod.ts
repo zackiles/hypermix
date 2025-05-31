@@ -38,8 +38,6 @@ import type { RepomixConfig } from './types.ts'
 let globalArgs: ReturnType<typeof parseArgs>
 let logger: ReturnType<typeof createLogger>
 
-// IMPORTANT: Always use the logger instead of console.log/warn/error directly
-// This ensures the --silent flag works properly throughout the application
 const createLogger = (silent: boolean) => ({
   log: (...args: unknown[]) => !silent && console.log(...args),
   warn: (...args: unknown[]) => console.warn(...args),
@@ -56,9 +54,9 @@ const createFileHelpers = () => {
   }
 
   const outputFromGithub = (url: string) => {
-    if (!url.includes('github.com')) return 'snapshot.xml'
+    if (!url.includes('github.com')) return 'codebase.xml'
     const parts = url.replace('https://github.com/', '').split('/')
-    return parts.length >= 2 ? `${parts[0]}/${parts[1]}.xml` : 'snapshot.xml'
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}.xml` : 'codebase.xml'
   }
 
   return { kebabFilename, outputFromGithub }
@@ -126,7 +124,7 @@ const buildRepomixArgs = async (
         ? join(outputPath, config.output)
         : fullUrl
         ? join(outputPath, helpers.outputFromGithub(fullUrl))
-        : join(outputPath, 'snapshot.xml'),
+        : join(outputPath, 'codebase.xml'),
     )
   }
 
@@ -404,7 +402,7 @@ const showHelp = () => {
     ${dim('For more information, visit: https://github.com/zackiles/hypermix')}
   `
 
-  console.log(helpText)
+  logger.log(helpText)
 }
 
 async function main() {
@@ -443,8 +441,8 @@ async function main() {
     if (
       error instanceof Error && error.message.includes('No config file found')
     ) {
-      console.error(red('❌ No configuration file found'))
-      console.error('')
+      logger.error(red('❌ No configuration file found'))
+      logger.error('')
       showHelp()
       Deno.exit(1)
     }
@@ -565,7 +563,7 @@ async function main() {
 
 if (import.meta.main) {
   main().then(() => Deno.exit(0)).catch((error) => {
-    console.error(
+    logger.error(
       Deno.inspect(error, { colors: true, depth: 9 }),
     )
     Deno.exit(1)
