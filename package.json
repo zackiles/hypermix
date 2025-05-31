@@ -1,6 +1,6 @@
 {
   "name": "hypermix",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Real-time, token-aware, intelligent repomixing of all your codebase and dependencies",
   "author": "Zachary Iles <zack.iles@gmail.com>",
   "license": "MIT",
