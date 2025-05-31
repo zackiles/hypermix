@@ -7,6 +7,9 @@
     <b>Real-time, token-aware, auto-repomixing of your codebase and all of its dependencies. Manage multiple local and remote sources of context.  Native-integrations for Cursor, Claude, and Windsurf to provide optimized context for your agent. Built for Node, Bun, and Deno projects in Typescript and Javascript.</b>
   </div></br>
   <p>
+    <a href="https://www.npmjs.com/package/hypermix"><img src="https://img.shields.io/npm/v/hypermix.svg" alt="npm version"></a>
+    <a href="https://jsr.io/@deno-kit/kit"><img   src="https://jsr.io/badges/@deno-kit/kit">
+    </a>
     <a href="https://github.com/zackiles/hypermix/actions/workflows/release.yml">
       <img src="https://github.com/zackiles/hypermix/actions/workflows/release.yml/badge.svg" alt="Release">
     </a>
