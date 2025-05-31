@@ -1,11 +1,14 @@
 name: Publish to NPM
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release to GitHub"] # Name of the workflow to wait for
+    types: [completed]
+    branches: [main]
 
 jobs:
   publish-npm:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
