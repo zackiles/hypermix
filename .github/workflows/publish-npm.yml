@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows: ["Release to GitHub"] # Name of the workflow to wait for
     types: [completed]
-    branches: [main]
 
 jobs:
   publish-npm:
