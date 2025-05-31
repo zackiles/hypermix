@@ -1,11 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  createTempDir,
-  createTempFile,
-  join,
-  mockConsole,
-} from './test-utils.ts'
+import { assert, assertEquals, mockConsole } from './test-utils.ts'
 import { parseArgs } from '@std/cli/parse-args'
 import { DEFAULT_PATH } from '../src/constants.ts'
 

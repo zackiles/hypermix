@@ -1,7 +1,6 @@
 import { ensureDir, exists, expandGlob } from '@std/fs'
 import { basename, dirname, fromFileUrl, join, relative } from '@std/path'
-import { APP_NAME, CONFIG_NAMES } from './constants.ts'
-import { detectProjectConfigFile } from './add-tasks.ts'
+import { APP_NAME } from './constants.ts'
 
 type ProjectType = 'typescript' | 'javascript' | 'unknown'
 
@@ -232,7 +231,6 @@ async function findSourceFolders(): Promise<string[]> {
 
 async function updateHypermixConfigWithMixes(
   configPath: string,
-  sourceFolders: string[],
 ): Promise<void> {
   const isJson = configPath.endsWith('.json')
   const repomixConfigPath = 'repomix.config.json'
@@ -249,8 +247,6 @@ async function updateHypermixConfigWithMixes(
     await Deno.writeTextFile(configPath, JSON.stringify(config, null, 2))
   } else {
     const content = await Deno.readTextFile(configPath)
-    const isTs = configPath.endsWith('.ts')
-    const exportStatement = isTs ? 'export default' : 'module.exports ='
 
     const newContent = content.replace(
       /mixes:\s*{\s*}/,
@@ -352,7 +348,7 @@ async function init(): Promise<void> {
     console.log(`✓ Found source folders: ${sourceFolders.join(', ')}`)
 
     // Update hypermix config with mixes
-    await updateHypermixConfigWithMixes(configPath, sourceFolders)
+    await updateHypermixConfigWithMixes(configPath)
 
     // Write repomix config
     await writeRepomixConfig(sourceFolders)

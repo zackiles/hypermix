@@ -29,7 +29,7 @@ const createFileHelpers = () => {
 const buildRepomixArgs = (
   config: RepomixConfig,
   outputPath: string,
-  helpers: ReturnType<typeof createFileHelpers>,
+  _helpers: ReturnType<typeof createFileHelpers>,
 ) => {
   const args: string[] = ['repomix']
 
@@ -76,7 +76,7 @@ const buildRepomixArgs = (
 const runRepomix = async (
   config: RepomixConfig,
   outputPath: string,
-  helpers: ReturnType<typeof createFileHelpers>,
+  _helpers: ReturnType<typeof createFileHelpers>,
 ) => {
   // Validate repomix config file exists if specified
   if (config.repomixConfig) {
@@ -105,8 +105,11 @@ const runRepomix = async (
   const { args, fullUrl, outputPath: finalOutputPath } = buildRepomixArgs(
     config,
     outputPath,
-    helpers,
+    _helpers,
   )
+
+  // Verify args were built correctly
+  assert(args.length > 0, 'Args should be built')
 
   // In the real implementation, it would run the command and check file exists
   return {
@@ -118,7 +121,7 @@ const runRepomix = async (
   }
 }
 
-Deno.test('buildRepomixArgs - handles remote GitHub repo', async () => {
+Deno.test('buildRepomixArgs - handles remote GitHub repo', () => {
   const helpers = createFileHelpers()
 
   const config: RepomixConfig = {
@@ -144,7 +147,7 @@ Deno.test('buildRepomixArgs - handles remote GitHub repo', async () => {
   }
 })
 
-Deno.test('buildRepomixArgs - handles full GitHub URL', async () => {
+Deno.test('buildRepomixArgs - handles full GitHub URL', () => {
   const helpers = createFileHelpers()
 
   const config: RepomixConfig = {
@@ -159,7 +162,7 @@ Deno.test('buildRepomixArgs - handles full GitHub URL', async () => {
   assertEquals(fullUrl, 'https://github.com/owner/repo')
 })
 
-Deno.test('buildRepomixArgs - handles local repo with no remote', async () => {
+Deno.test('buildRepomixArgs - handles local repo with no remote', () => {
   const helpers = createFileHelpers()
 
   const config: RepomixConfig = {
@@ -177,7 +180,7 @@ Deno.test('buildRepomixArgs - handles local repo with no remote', async () => {
   assertEquals(args[2], '**/*.ts')
 })
 
-Deno.test('buildRepomixArgs - includes extraFlags when provided', async () => {
+Deno.test('buildRepomixArgs - includes extraFlags when provided', () => {
   const helpers = createFileHelpers()
 
   const config: RepomixConfig = {
@@ -191,7 +194,7 @@ Deno.test('buildRepomixArgs - includes extraFlags when provided', async () => {
   assert(args.includes('--copy'))
 })
 
-Deno.test('buildRepomixArgs - handles repomix config file', async () => {
+Deno.test('buildRepomixArgs - handles repomix config file', () => {
   const helpers = createFileHelpers()
 
   const config: RepomixConfig = {

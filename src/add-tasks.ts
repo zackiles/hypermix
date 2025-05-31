@@ -152,7 +152,7 @@ async function addTasksToProjectConfig(
 async function removeTasksFromProjectConfig(
   repoRoot: string,
   configFileName: ProjectConfigFile,
-  hypermixConfigPath?: string,
+  _hypermixConfigPath?: string,
 ): Promise<boolean> {
   const configPath = join(repoRoot, configFileName)
   if (!await exists(configPath)) return false

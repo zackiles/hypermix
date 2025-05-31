@@ -1,4 +1,4 @@
-import { assertEquals, createTempDir, join } from './test-utils.ts'
+import { assertEquals } from './test-utils.ts'
 import type { RepomixConfig } from '../src/types.ts'
 
 // Simplified function for normalizing GitHub URLs

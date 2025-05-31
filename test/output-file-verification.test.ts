@@ -6,7 +6,6 @@ import {
   join,
   mockConsole,
 } from './test-utils.ts'
-import type { RepomixConfig } from '../src/types.ts'
 
 // Function to filter only existing output files
 async function filterExistingOutputFiles(

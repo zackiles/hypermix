@@ -1,10 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  createTempDir,
-  join,
-  mockConsole,
-} from './test-utils.ts'
+import { assert, assertEquals, join, mockConsole } from './test-utils.ts'
 import type { RepomixConfig } from '../src/types.ts'
 
 // Simplified version of runRepomix for testing
@@ -13,6 +7,9 @@ async function runRepomix(
   outputPath: string,
   shouldFail = false,
 ): Promise<{ success: boolean; repoName: string; outputPath: string } | null> {
+  // Add actual async operation to justify the async keyword
+  await new Promise((resolve) => setTimeout(resolve, 1))
+
   // Simulate failure based on shouldFail flag
   if (shouldFail) {
     return null

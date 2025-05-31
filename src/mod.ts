@@ -33,7 +33,7 @@ import { toTransformStream } from '@std/streams/to-transform-stream'
 import { parse as parseJsonc } from 'jsonc-parser'
 import { loadConfig } from './load-config.ts'
 import { BOOLEAN_FLAGS, DEFAULT_FLAGS, DEFAULT_PATH } from './constants.ts'
-import type { HypermixConfig, RepomixConfig } from './types.ts'
+import type { RepomixConfig } from './types.ts'
 
 let globalArgs: ReturnType<typeof parseArgs>
 let logger: ReturnType<typeof createLogger>
@@ -137,7 +137,6 @@ const buildRepomixArgs = async (
     args,
     fullUrl,
     outputPath: finalOutputPath,
-    hasRepomixConfig: !!configPath,
   }
 }
 
@@ -170,12 +169,11 @@ const runRepomix = async (
     }
   }
 
-  const { args, fullUrl, outputPath: finalOutputPath, hasRepomixConfig } =
-    await buildRepomixArgs(
-      config,
-      outputPath,
-      helpers,
-    )
+  const { args, fullUrl, outputPath: finalOutputPath } = await buildRepomixArgs(
+    config,
+    outputPath,
+    helpers,
+  )
 
   // Ensure output directory exists
   await ensureDir(dirname(finalOutputPath))
@@ -229,15 +227,13 @@ const modifyIgnoreFile = async (
       "Ensured we're not blocking Cursor from seeing the file at all. This is required to allow Cursor to access the file since we'll have it gitignored",
   }
 
-  const getFileMessage = (action: string) =>
-    `${action} ${fileType} with pattern: ${pattern}. ${messages[fileType]}`
-
   try {
     const fileExists = await exists(filePath)
 
     if (!fileExists) {
       if (shouldExist) {
         await Deno.writeTextFile(filePath, contentToAdd.trim())
+        logger.log(`Created ${basename(filePath)}: ${messages[fileType]}`)
       }
       return
     }
@@ -256,6 +252,7 @@ const modifyIgnoreFile = async (
 
     if ((shouldExist && !patternExists) || (!shouldExist && patternExists)) {
       await Deno.writeTextFile(filePath, content + contentToAdd)
+      logger.log(`Updated ${basename(filePath)}: ${messages[fileType]}`)
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error)

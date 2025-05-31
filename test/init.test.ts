@@ -1,7 +1,6 @@
 import {
   assert,
   assertEquals,
-  assertExists,
   createTempDir,
   createTempFile,
   exists,
@@ -287,6 +286,7 @@ Deno.test('init - installs repomix for Deno project', async () => {
       )
     } finally {
       consoleMock.restore()
+      commandMock.restore()
       // @ts-ignore restoring built-in
       Deno.Command = originalCommand
     }

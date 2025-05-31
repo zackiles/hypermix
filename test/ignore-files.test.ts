@@ -6,18 +6,6 @@ import {
   join,
 } from './test-utils.ts'
 
-// Import the private function directly for testing
-// In a real implementation, we might expose these for testing
-const importModFunctions = async () => {
-  const mod = await import('../src/mod.ts')
-  return {
-    // @ts-ignore accessing private function
-    updateIgnoreFiles: mod.updateIgnoreFiles,
-    // @ts-ignore accessing private function
-    modifyIgnoreFile: mod.modifyIgnoreFile,
-  }
-}
-
 // Simplified version for testing without accessing private functions
 async function modifyIgnoreFile(
   filePath: string,

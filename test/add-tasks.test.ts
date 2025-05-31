@@ -10,7 +10,6 @@ import {
   addTasksToProjectConfig,
   detectProjectConfigFile,
   getTaskDefinition,
-  ProjectConfigFile,
 } from '../src/add-tasks.ts'
 import { APP_NAME } from '../src/constants.ts'
 
