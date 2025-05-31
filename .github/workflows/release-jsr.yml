@@ -57,5 +57,5 @@ jobs:
       - name: Publish to JSR
         run: |
           echo "Publishing to JSR registry..."
-          npx jsr publish --no-check
+          npx jsr publish
           echo "✓ Successfully published to JSR"
