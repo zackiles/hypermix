@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zackiles/hypermix"
+    "url": "git+https://github.com/zackiles/hypermix.git"
   },
   "bin": {
     "hypermix": "scripts/launcher.js"
@@ -35,4 +35,4 @@
   "engines": {
     "node": ">=16.0.0"
   }
-} 
+}
