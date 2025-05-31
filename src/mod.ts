@@ -1,24 +1,59 @@
 /**
- * AI Context Builder
+ * @module hypermix
  *
- * Builds XML context files for AI tools using repomix.
- * Fetches code from remote repositories or local codebase.
+ * AI Context Builder for generating LLM context files using repomix.
+ *
+ * This module provides tools to build XML context files for AI assistants.
+ * It can fetch code from remote GitHub repositories or use the local codebase,
+ * then generates properly formatted context files optimized for large language models.
+ * The module tracks token usage and provides warnings when context files approach model limits.
  *
  * Command-line options:
- * - --output-path, -o: Override the default output directory for all context files
- *   Example: `deno run -A scripts/build-context.ts --output-path ./custom/path`
- * - --silent, -s: Suppress all output except errors
+ * - `--output-path`, `-o`: Path to generate the mix files to
+ * - `--config`, `-c`: Path to a hypermix.config file if one isn't present in the current working directory
+ * - `--silent`, `-s`: Suppress all output except errors
+ * - `--help`, `-h`: Show help message
  *
- * Config entries can be defined in the configs array with these properties:
- * - remote: GitHub repository in 'owner/repo' format (https://github.com/ prefix is optional)
- * - include: Array of glob patterns for files to include
- * - ignore: Array of glob patterns for files to ignore
- * - output: Custom output path relative to OUTPUT_PATH
- * - config: Path to an existing repomix.config.json file
- * - extraFlags: Additional command-line flags for repomix
+ * Configuration options:
+ * - `remote`: GitHub repository in 'owner/repo' format (https://github.com/ prefix is optional)
+ * - `include`: Array of glob patterns for files to include
+ * - `ignore`: Array of glob patterns for files to ignore
+ * - `output`: Custom output path relative to OUTPUT_PATH
+ * - `config`: Path to an existing repomix.config.json file
+ * - `extraFlags`: Additional command-line flags for repomix
  *
- * The script automatically updates .gitignore, .cursorignore, and .cursorignoreindex
+ * The module automatically updates .gitignore, .cursorignore, and .cursorignoreindex
  * to ensure proper handling of the generated context files.
+ *
+ * @example Basic Usage
+ * ```ts
+ * import { main } from "./mod.ts"
+ * await main()
+ * ```
+ *
+ * @example CLI Usage
+ * ```bash
+ * # Use default config (hypermix.config.ts)
+ * hypermix
+ *
+ * # Initialize a new config file
+ * hypermix init
+ *
+ * # Add a GitHub repository to your config
+ * hypermix add openai/openai-node
+ *
+ * # Specify custom config file
+ * hypermix --config ./custom.config.ts
+ *
+ * # Override output directory
+ * hypermix --output-path ./custom-output
+ * ```
+ *
+ * @throws {Error} If repomix is not installed or if no valid config file is found
+ * @throws {Error} If specified output paths don't exist and can't be created
+ *
+ * @see {@link https://github.com/zackiles/hypermix|GitHub Repository}
+ * @see {@link RepomixConfig} for configuration object structure
  */
 
 import { parseArgs } from '@std/cli/parse-args'
@@ -423,6 +458,29 @@ const showHelp = () => {
   logger.log(helpText)
 }
 
+/**
+ * The main entry point for the Hypermix application.
+ *
+ * Processes command-line arguments, loads configuration, and orchestrates the context
+ * file generation process. This function handles several commands:
+ * - `add`: Adds a new GitHub repository to the configuration
+ * - `init`: Initializes a new hypermix configuration file
+ * - Default: Processes the loaded configuration to generate context files
+ *
+ * The function also counts tokens in generated files and provides warnings
+ * when files approach token limits for large language models.
+ *
+ * @async
+ * @returns {Promise<void>} A promise that resolves when all operations complete
+ * @throws {Error} If configuration loading fails or if no valid output files can be created
+ *
+ * @example
+ * ```ts
+ * // Run as a module
+ * import { main } from "./mod.ts";
+ * await main();
+ * ```
+ */
 async function main() {
   const firstArg = Deno.args[0]
   const secondArg = Deno.args[1]
@@ -612,4 +670,3 @@ if (import.meta.main) {
 }
 
 export { main }
-export { init } from './init.ts'

@@ -445,21 +445,15 @@ Deno.test('init - creates cursor rule with correct replacements', async () => {
       const content = await Deno.readTextFile(cursorRulePath)
       const projectName = tempDir.split('/').pop()
 
-      // The file should have the template replacements done
-      // Note: Cursor may add frontmatter to .mdx files
+      // Check that the file list was correctly inserted
+      assert(content.includes(`globs: ${projectName}-main-repomix.xml`))
+      assert(content.includes(`${projectName}-main-repomix.xml`))
 
-      // Check that the template placeholder was replaced with the actual file list
-      assert(content.includes(`- ${projectName}-main-repomix.xml`))
-
-      // Check that the conditional text was replaced
-      assert(content.includes('This file represents the current codebase.'))
-
-      // Check that {library/dependency} was replaced with hypermix
-      assert(content.includes('related to hypermix'))
-      assert(!content.includes('{library/dependency}'))
-
-      // The {One of these files...} should be replaced
-      assert(!content.includes('{One of these files'))
+      // Check that the content is from the template
+      assert(content.includes('Understanding Your Hypermix Generated Files'))
+      assert(content.includes('Purpose'))
+      assert(content.includes('Usage'))
+      assert(content.includes('Tips'))
     } finally {
       consoleMock.restore()
       commandMock.restore()

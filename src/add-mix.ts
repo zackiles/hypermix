@@ -1,3 +1,17 @@
+/**
+ * @module add_mix
+ *
+ * Handles adding new GitHub repositories to the hypermix configuration.
+ * Provides functionality to validate GitHub repositories, normalize repository URLs,
+ * and update various config file formats (TypeScript, JavaScript, JSON, JSONC).
+ *
+ * @example
+ * ```ts
+ * import { handleAddCommand } from "./add-mix.ts"
+ * await handleAddCommand("owner/repo", logger)
+ * ```
+ */
+
 import { exists } from '@std/fs'
 import { join, resolve } from '@std/path'
 import { parse as parseJsonc } from 'jsonc-parser'

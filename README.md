@@ -80,10 +80,13 @@ In general, a design goal of Hypermix is not having to access it at all once you
 ### Generating Mixes
 
 ```bash
-# Run with a custom config file
+# Run with a hypermix config file in current working directory
+npx hypermix
+
+# Specify the path of the config file
 npx hypermix --config hypermix.config.ts
 
-# Run with custom output directory
+# Specify the output directory
 npx hypermix --output-path ./custom-context
 ```
 

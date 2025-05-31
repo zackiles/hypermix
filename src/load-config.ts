@@ -1,3 +1,17 @@
+/**
+ * @module load_config
+ *
+ * Loads and validates hypermix configuration from various file formats.
+ * Supports TypeScript (.ts), JavaScript (.js), JSON (.json), and JSONC (.jsonc)
+ * configuration files with automatic format detection.
+ *
+ * @example
+ * ```ts
+ * import { loadConfig } from "./load-config.ts"
+ * const config = await loadConfig("./hypermix.config.ts")
+ * ```
+ */
+
 import { extname } from '@std/path'
 import { parse } from '@std/jsonc'
 import type { HypermixConfig, RepomixConfig } from './types.ts'

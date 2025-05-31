@@ -1,3 +1,20 @@
+/**
+ * @module add_tasks
+ *
+ * Manages project task configurations for hypermix across different build systems.
+ * Supports adding and removing hypermix tasks in package.json, deno.json,
+ * project.json, VS Code tasks.json, and Makefiles.
+ *
+ * @example
+ * ```ts
+ * import { addTasksToProjectConfig, detectProjectConfigFile } from "./add-tasks.ts"
+ * const configFile = await detectProjectConfigFile("./")
+ * if (configFile) {
+ *   await addTasksToProjectConfig("./", configFile, { hypermix: "hypermix" })
+ * }
+ * ```
+ */
+
 import { exists } from '@std/fs'
 import { basename, join } from '@std/path'
 import { applyEdits, modify } from 'jsonc-parser'

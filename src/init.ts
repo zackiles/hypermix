@@ -1,6 +1,6 @@
 import { ensureDir, exists, expandGlob } from '@std/fs'
 import { basename, dirname, fromFileUrl, join, relative } from '@std/path'
-import { APP_NAME } from './constants.ts'
+import { APP_NAME, CURSOR_RULE_TEMPLATE } from './constants.ts'
 
 type ProjectType = 'typescript' | 'javascript' | 'unknown'
 
@@ -287,35 +287,21 @@ async function copyCursorRule(outputFile: string): Promise<void> {
   )
   await ensureDir(dirname(cursorRulePath))
 
-  const templatePath = join(
-    dirname(fromFileUrl(import.meta.url)),
-    'cursor-rule.mdc',
-  )
-  let content = await Deno.readTextFile(templatePath)
+  let content = CURSOR_RULE_TEMPLATE
 
-  // Replace the globs in the frontmatter
+  // Replace the globs in the frontmatter and body
   content = content.replace(
     'globs: {repomix_files_list}',
-    `globs: 
-  - ${outputFile}`,
+    `globs: ${outputFile}`,
   )
 
   // Replace template strings in the body
   content = content.replace(
     '{repomix_files_list}',
-    `- ${outputFile}`,
+    outputFile,
   )
 
-  // Remove the conditional text in braces
-  content = content.replace(
-    /\{One of these files.*?\}/,
-    'This file represents the current codebase.',
-  )
-
-  // Replace {library/dependency} with hypermix
-  content = content.replace(/\{library\/dependency\}/g, 'hypermix')
-
-  // Write the file (no need to add frontmatter since it's already in the template)
+  // Write the file
   await Deno.writeTextFile(cursorRulePath, content)
 }
 
