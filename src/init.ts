@@ -1,5 +1,5 @@
 import { ensureDir, exists, expandGlob } from '@std/fs'
-import { basename, dirname, fromFileUrl, join, relative } from '@std/path'
+import { basename, dirname, join, relative } from '@std/path'
 import { APP_NAME, CURSOR_RULE_TEMPLATE } from './constants.ts'
 
 type ProjectType = 'typescript' | 'javascript' | 'unknown'

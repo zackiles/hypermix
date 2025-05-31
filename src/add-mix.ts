@@ -193,7 +193,7 @@ export async function handleAddCommand(
     logger.log(`Found config file: ${configPath}`)
 
     // Normalize and validate GitHub repo
-    const { shorthand, fullUrl } = await normalizeAndValidateGithubRepo(
+    const { shorthand } = await normalizeAndValidateGithubRepo(
       repoIdentifier,
     )
     logger.log(`Validated repository: ${shorthand}`)
