@@ -4,7 +4,7 @@
   <img src="logo.png" alt="Hypermix Logo" height="300">
 
 <div align="center">
-    <b>Real-time, token-aware, auto-repomixing of your codebase and all of its dependencies. Manage multiple local and remote sources of context.  Native-integrations for Cursor, Claude, and Windsurf to provide optimized context for your agent. Built for Node, Bun, and Deno projects.</b>
+    <b>Real-time, token-aware, auto-repomixing of your codebase and all of its dependencies. Manage multiple local and remote sources of context.  Native-integrations for Cursor, Claude, and Windsurf to provide optimized context for your agent. Built for Node, Bun, and Deno projects in Typescript and Javascript.</b>
   </div></br>
   <p>
     <a href="https://github.com/zackiles/hypermix/actions/workflows/release.yml">
@@ -15,7 +15,7 @@
 
 ## Overview
 
-Hypermix bridges the gap between repomix and agentic development environment. Once you add a mix, like a remote repo, it takes over and tracks token usage across your mixes, intelligently tuning your settings in real-time. Hypermix adds ergonomics to your workflows by:
+Hypermix bridges the gap between repomix, your project, and your agentic development environment. It tracks token usage across your mixes, intelligently tuning your settings and agent instructions in real-time. Hypermix adds ergonomics to your workflows.
 
 ### How It Works
 
